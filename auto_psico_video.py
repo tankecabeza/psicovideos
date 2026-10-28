@@ -1,8 +1,6 @@
 import os
 import sys
-import json
 import wave
-import time
 import random
 import asyncio
 import urllib.parse
@@ -10,18 +8,21 @@ import requests
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import edge_tts
-from moviepy import ImageClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips
+from moviepy import (
+    ImageClip, AudioFileClip, CompositeAudioClip,
+    CompositeVideoClip, concatenate_videoclips,
+)
 
-# Parche Pillow para MoviePy
+# Parche Pillow
 if not hasattr(Image, "ANTIALIAS"):
     Image.ANTIALIAS = Image.LANCZOS
 
 # ==============================================================================
-# CONFIGURACIÓN (DATOS DIRECTOS DE TELEGRAM)
+# CONFIGURACIÓN (desde secrets de GitHub)
 # ==============================================================================
-TELEGRAM_TOKEN = "8776916130:AAHHTnpFXzTmCXHmjiQ0vTUqCgnRaXvna58"
-TELEGRAM_CHAT_ID = "-100439562268"
-LINK_AFILIADO = "https://amzn.to/tu-enlace"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+LINK_AFILIADO = os.getenv("LINK_AFILIADO", "https://amzn.to/tu-enlace")
 ARCHIVO_HISTORIAL = "historial_videos.txt"
 
 PACK_GUIONES = {
@@ -98,7 +99,7 @@ PACK_GUIONES = {
         "escenas": [
             {"texto": "¿Quieres que alguien acepte un favor grande? Empieza pidiendo algo ridículamente pequeño.", "prompt": "foot in dark doorway cinematic 8k"},
             {"texto": "Su cerebro aceptará por inercia para mantener la coherencia interna.", "prompt": "domino effect falling in shadows 8k"},
-            {"texto": "Когда quieras acordarte, habrá aceptado tus condiciones sin rechistar.", "prompt": "puppet strings shadow dark 8k"},
+            {"texto": "Cuando quieras acordarte, habrá aceptado tus condiciones sin rechistar.", "prompt": "puppet strings shadow dark 8k"},
             {"texto": "Desbloquea las técnicas prohibidas de negociación en el enlace fijado.", "prompt": "locked leather diary dark aesthetic"}
         ]
     },
@@ -116,7 +117,7 @@ PACK_GUIONES = {
 }
 
 # ==============================================================================
-# LÓGICA AUDIOVISUAL
+# HISTORIAL
 # ==============================================================================
 def cargar_historial():
     if not os.path.exists(ARCHIVO_HISTORIAL):
@@ -128,6 +129,9 @@ def guardar_historial(tema):
     with open(ARCHIVO_HISTORIAL, "a", encoding="utf-8") as f:
         f.write(f"{tema}\n")
 
+# ==============================================================================
+# LÓGICA AUDIOVISUAL
+# ==============================================================================
 def crear_musica_fondo(filepath: str, duracion: float, sr: int = 44100):
     t = np.linspace(0, duracion, int(sr * duracion), False)
     sub = np.sin(2 * np.pi * 55.0 * t) * 0.50
@@ -153,7 +157,9 @@ def descargar_fondo_ia(prompt: str, ruta_img: str, seed: int):
         r.raise_for_status()
         with open(ruta_img, "wb") as f:
             f.write(r.content)
-    except Exception:
+        Image.open(ruta_img).verify()
+    except Exception as e:
+        print(f"⚠️ Fondo IA no disponible ({e}); uso fondo liso.")
         Image.new("RGB", (1080, 1920), (14, 18, 28)).save(ruta_img)
 
 def quemar_textos(ruta_in, cabecera, texto, num_escena, total_escenas, ruta_out):
@@ -165,58 +171,79 @@ def quemar_textos(ruta_in, cabecera, texto, num_escena, total_escenas, ruta_out)
     img = Image.alpha_composite(img, capa).convert("RGB")
     draw = ImageDraw.Draw(img)
 
-    f_cab = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 44)
-    f_sub = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 72)
+    fuente = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    f_cab = ImageFont.truetype(fuente, 44)
+    f_sub = ImageFont.truetype(fuente, 72)
 
     bbox_c = draw.textbbox((0, 0), cabecera, font=f_cab)
-    draw.text(((1080 - (bbox_c[2]-bbox_c[0])) / 2, 95), cabecera, font=f_cab, fill="#FFFFFF", stroke_width=4, stroke_fill="#000000")
+    draw.text(((1080 - (bbox_c[2] - bbox_c[0])) / 2, 95), cabecera, font=f_cab,
+              fill="#FFFFFF", stroke_width=4, stroke_fill="#000000")
 
     palabras = texto.upper().split()
     lineas, actual = [], []
     for p in palabras:
         actual.append(p)
         if len(" ".join(actual)) > 17:
-            if len(actual) > 1: actual.pop()
+            if len(actual) > 1:
+                actual.pop()
             lineas.append(" ".join(actual))
             actual = [p] if len(actual) > 1 else []
-    if actual: lineas.append(" ".join(actual))
+    if actual:
+        lineas.append(" ".join(actual))
 
     y = 1210
     mitad = max(1, len(lineas) // 2)
     for idx, lin in enumerate(lineas):
-        color = "#00FF88" if num_escena == total_escenas - 1 and idx >= mitad else ("#FFE600" if (num_escena == total_escenas - 1 or idx >= mitad) else "#FFFFFF")
+        es_ultima = num_escena == total_escenas - 1
+        if es_ultima and idx >= mitad:
+            color = "#00FF88"
+        elif es_ultima or idx >= mitad:
+            color = "#FFE600"
+        else:
+            color = "#FFFFFF"
         bbox = draw.textbbox((0, 0), lin, font=f_sub)
-        draw.text(((1080 - (bbox[2]-bbox[0])) / 2, y), lin, font=f_sub, fill=color, stroke_width=6, stroke_fill="#000000")
-        y += (bbox[3]-bbox[1]) + 26
+        draw.text(((1080 - (bbox[2] - bbox[0])) / 2, y), lin, font=f_sub,
+                  fill=color, stroke_width=6, stroke_fill="#000000")
+        y += (bbox[3] - bbox[1]) + 26
     img.save(ruta_out, quality=95)
 
 def producir_video(clave, datos):
-    print(f"🎬 Iniciando producción: {clave}")
+    print(f"🎬 Iniciando producción: {clave}", flush=True)
     carpeta = "render_tmp"
     os.makedirs(carpeta, exist_ok=True)
     clips = []
-    
+
     for i, esc in enumerate(datos["escenas"]):
         r_mp3 = os.path.join(carpeta, f"voz_{i}.mp3")
         r_raw = os.path.join(carpeta, f"raw_{i}.jpg")
         r_sub = os.path.join(carpeta, f"escena_{i}.jpg")
-        
+
         asyncio.run(sintetizar_voz(esc["texto"], "es-ES-AlvaroNeural", r_mp3))
         audio = AudioFileClip(r_mp3)
-        descargar_fondo_ia(esc["prompt"], r_raw, 300 + i*19)
+        dur = audio.duration + 0.3
+
+        descargar_fondo_ia(esc["prompt"], r_raw, 300 + i * 19)
         quemar_textos(r_raw, datos["cabecera"], esc["texto"], i, len(datos["escenas"]), r_sub)
-        
-        clips.append(ImageClip(r_sub).with_duration(audio.duration + 0.3).resized(lambda t: 1.0 + 0.028*t).with_position(("center", "center")).with_audio(audio))
+
+        # --- API MoviePy 2.x ---
+        base = ImageClip(r_sub).with_duration(dur)
+        zoom = base.resized(lambda t: 1.0 + 0.028 * t).with_position(("center", "center"))
+        escena = CompositeVideoClip([zoom], size=(1080, 1920)).with_duration(dur).with_audio(audio)
+        clips.append(escena)
 
     final = concatenate_videoclips(clips, method="compose")
+
     r_bgm = os.path.join(carpeta, "bgm.wav")
     crear_musica_fondo(r_bgm, final.duration)
-    bgm = AudioFileClip(r_bgm).volumex(0.18)
-    
+    bgm = AudioFileClip(r_bgm).with_volume_scaled(0.18).with_duration(final.duration)
+
+    mezcla = CompositeAudioClip([final.audio, bgm])
     mp4_out = os.path.join(carpeta, "VIDEO_FINAL.mp4")
-    final.with_audio(CompositeAudioClip([final.audio, bgm])).write_videofile(
-        mp4_out, fps=24, codec="libx264", audio_codec="aac", preset="ultrafast", logger=None
+    final.with_audio(mezcla).write_videofile(
+        mp4_out, fps=24, codec="libx264", audio_codec="aac",
+        preset="ultrafast", logger=None,
     )
+    print(f"✅ Vídeo renderizado: {mp4_out}", flush=True)
     return mp4_out
 
 # ==============================================================================
@@ -224,11 +251,10 @@ def producir_video(clave, datos):
 # ==============================================================================
 def enviar_video_telegram(video_path, titulo_yt, libro, link):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        print("❌ Faltan los datos de Telegram configurados en el script.")
+        print("❌ Faltan TELEGRAM_TOKEN / TELEGRAM_CHAT_ID en los secrets.")
         return False
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendVideo"
-    
     caption = (
         f"🧠 <b>¡NUEVO VÍDEO DE PSICOLOGÍA LISTO!</b>\n\n"
         f"📌 <b>Título:</b> {titulo_yt}\n"
@@ -237,25 +263,21 @@ def enviar_video_telegram(video_path, titulo_yt, libro, link):
         f"<i>Descarga este vídeo y súbelo a TikTok y YouTube Shorts.</i>"
     )
 
-    print("📲 Enviando vídeo a Telegram...")
+    print("📲 Enviando vídeo a Telegram...", flush=True)
     try:
         with open(video_path, "rb") as vid:
             response = requests.post(
                 url,
-                data={
-                    "chat_id": TELEGRAM_CHAT_ID,
-                    "caption": caption,
-                    "parse_mode": "HTML"
-                },
+                data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption, "parse_mode": "HTML",
+                      "supports_streaming": "true", "width": 1080, "height": 1920},
                 files={"video": vid},
-                timeout=120
+                timeout=180,
             )
         if response.status_code == 200:
             print("✅ ¡Vídeo enviado a Telegram con éxito!")
             return True
-        else:
-            print(f"❌ Error de Telegram: {response.text}")
-            return False
+        print(f"❌ Error de Telegram: {response.text}")
+        return False
     except Exception as e:
         print(f"❌ Excepción enviando a Telegram: {e}")
         return False
@@ -265,22 +287,22 @@ def enviar_video_telegram(video_path, titulo_yt, libro, link):
 # ==============================================================================
 if __name__ == "__main__":
     historial = cargar_historial()
-    pendientes = [k for k in PACK_GUIONES.keys() if k not in historial]
-    
+    pendientes = [k for k in PACK_GUIONES if k not in historial]
+
     if not pendientes:
         print("ℹ️ Historial reiniciado.")
-        open(ARCHIVO_HISTORIAL, 'w').close()
+        open(ARCHIVO_HISTORIAL, "w").close()
         pendientes = list(PACK_GUIONES.keys())
-        
+
     clave_elegida = random.choice(pendientes)
     datos = PACK_GUIONES[clave_elegida]
-    
-    # 1. Renderizar vídeo
+
     ruta_mp4 = producir_video(clave_elegida, datos)
-    
-    # 2. Enviar a Telegram
-    enviar_video_telegram(ruta_mp4, datos["titulo_yt"], datos["libro_afiliado"], LINK_AFILIADO)
-    
-    # 3. Guardar historial
+
+    ok = enviar_video_telegram(ruta_mp4, datos["titulo_yt"], datos["libro_afiliado"], LINK_AFILIADO)
+    if not ok:
+        print("💥 No se pudo enviar el vídeo.")
+        sys.exit(1)
+
     guardar_historial(clave_elegida)
     print("🎉 Proceso completado.")
