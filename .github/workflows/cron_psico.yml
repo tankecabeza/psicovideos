@@ -2,9 +2,8 @@ name: Bot Automatico PsicoVideos
 
 on:
   schedule:
-    # Se ejecuta cada 2 horas en punto
     - cron: '0 */2 * * *'
-  workflow_dispatch: # Permite lanzarlo manualmente cuando quieras desde Actions
+  workflow_dispatch:
 
 jobs:
   publicar-video:
@@ -26,11 +25,14 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --no-cache-dir moviepy edge-tts Pillow numpy requests
+          pip install --no-cache-dir -r requirements.txt
 
-      - name: Run python auto_psico_video.py
-        run: |
-          python auto_psico_video.py
+      - name: Fabricar y enviar el vídeo
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          LINK_AFILIADO: ${{ secrets.LINK_AFILIADO }}
+        run: python -u auto_psico_video.py
 
       - name: Commit and push historial
         run: |
