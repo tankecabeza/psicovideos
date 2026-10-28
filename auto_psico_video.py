@@ -98,7 +98,7 @@ PACK_GUIONES = {
         "escenas": [
             {"texto": "¿Quieres que alguien acepte un favor grande? Empieza pidiendo algo ridículamente pequeño.", "prompt": "foot in dark doorway cinematic 8k"},
             {"texto": "Su cerebro aceptará por inercia para mantener la coherencia interna.", "prompt": "domino effect falling in shadows 8k"},
-            {"texto": "Cuando quieras acordarte, habrá aceptado tus condiciones sin rechistar.", "prompt": "puppet strings shadow dark 8k"},
+            {"texto": "Когда quieras acordarte, habrá aceptado tus condiciones sin rechistar.", "prompt": "puppet strings shadow dark 8k"},
             {"texto": "Desbloquea las técnicas prohibidas de negociación en el enlace fijado.", "prompt": "locked leather diary dark aesthetic"}
         ]
     },
@@ -206,7 +206,7 @@ def producir_video(clave, datos):
         descargar_fondo_ia(esc["prompt"], r_raw, 300 + i*19)
         quemar_textos(r_raw, datos["cabecera"], esc["texto"], i, len(datos["escenas"]), r_sub)
         
-        clips.append(ImageClip(r_sub).set_duration(audio.duration + 0.3).resize(lambda t: 1.0 + 0.028*t).set_position(("center", "center")).set_audio(audio))
+        clips.append(ImageClip(r_sub).with_duration(audio.duration + 0.3).resized(lambda t: 1.0 + 0.028*t).with_position(("center", "center")).with_audio(audio))
 
     final = concatenate_videoclips(clips, method="compose")
     r_bgm = os.path.join(carpeta, "bgm.wav")
@@ -214,7 +214,7 @@ def producir_video(clave, datos):
     bgm = AudioFileClip(r_bgm).volumex(0.18)
     
     mp4_out = os.path.join(carpeta, "VIDEO_FINAL.mp4")
-    final.set_audio(CompositeAudioClip([final.audio, bgm])).write_videofile(
+    final.with_audio(CompositeAudioClip([final.audio, bgm])).write_videofile(
         mp4_out, fps=24, codec="libx264", audio_codec="aac", preset="ultrafast", logger=None
     )
     return mp4_out
