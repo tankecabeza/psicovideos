@@ -57,6 +57,61 @@ PACK_GUIONES = {
             {"texto": "Retira tu atención en silencio y verás cómo empiezan a buscarte.", "prompt": "silhouette confident man tall skyscraper window"},
             {"texto": "Aprende a dominar las leyes de la persuasión en el enlace del comentario fijado.", "prompt": "minimalist dark book golden light 8k"}
         ]
+    },
+    "4. Controlar una conversacion": {
+        "cabecera": "DOMINA CUALQUIER CONVERSACIÓN",
+        "titulo_yt": "El Secreto Psicológico para Controlar a los Demás sin que lo Noten",
+        "libro_afiliado": "Psicología Oscura y Manipulación",
+        "escenas": [
+            {"texto": "Quien hace las preguntas en una conversación, tiene el control absoluto.", "prompt": "interrogator sitting in dark room 8k"},
+            {"texto": "Si intentan atacarte, no te defiendas. Devuelve la pregunta con otra pregunta.", "prompt": "mirror reflection dark aesthetic 8k"},
+            {"texto": "Observa cómo la otra persona empieza a dudar de sus propias palabras.", "prompt": "confused person under dim light 8k"},
+            {"texto": "Domina el arte de la manipulación mental con el libro del comentario fijado.", "prompt": "ancient secret book dark background"}
+        ]
+    },
+    "5. El poder del silencio": {
+        "cabecera": "EL ARMA DEL SILENCIO",
+        "titulo_yt": "Por Qué el Silencio Incomoda Tanto a los Manipuladores #shorts",
+        "libro_afiliado": "El Poder del Ahora",
+        "escenas": [
+            {"texto": "El silencio es una de las armas psicológicas más destructivas que existen.", "prompt": "silent dark room dramatic shadows 8k"},
+            {"texto": "Cuando alguien te insulte o presione, no respondas al instante. Quédate en silencio.", "prompt": "person holding finger to lips quiet dark 8k"},
+            {"texto": "El cerebro de la otra persona interpretará ese vacío como una amenaza y cederá.", "prompt": "broken glass shadow dark background 8k"},
+            {"texto": "Descubre cómo usar la inteligencia emocional a tu favor en el enlace fijado.", "prompt": "mysterious glowing book dark room"}
+        ]
+    },
+    "6. Sesgo de confirmacion": {
+        "cabecera": "CÓMO MANIPULAN TU MENTE",
+        "titulo_yt": "El Sesgo Oculto que Te Hace Creer Mentiras Todos los Días",
+        "libro_afiliado": "Pensar Rápido, Pensar Despacio",
+        "escenas": [
+            {"texto": "Tu cerebro busca constantemente pruebas para confirmar lo que ya cree.", "prompt": "maze of mirrors dark moody 8k"},
+            {"texto": "Por eso es tan fácil manipular a las masas sin que se den cuenta.", "prompt": "crowd of silhouettes in dark blue light 8k"},
+            {"texto": "Para romper este ciclo, debes cuestionar aquello de lo que estás más seguro.", "prompt": "key opening a heavy dark door 8k"},
+            {"texto": "Aprende cómo funciona realmente tu mente en el libro del comentario fijado.", "prompt": "brain glowing neon dark minimalist 8k"}
+        ]
+    },
+    "7. La tecnica del pie en la puerta": {
+        "cabecera": "TÉCNICA DE PERSUASIÓN LETAL",
+        "titulo_yt": "Cómo Consigue la Gente que Digas 'Sí' a Todo #psicologia",
+        "libro_afiliado": "Influencia: La Psicología de la Persuasión",
+        "escenas": [
+            {"texto": "¿Quieres que alguien acepte un favor grande? Empieza pidiendo algo ridículamente pequeño.", "prompt": "foot in dark doorway cinematic 8k"},
+            {"texto": "Su cerebro aceptará por inercia para mantener la coherencia interna.", "prompt": "domino effect falling in shadows 8k"},
+            {"texto": "Cuando quieras acordarte, habrá aceptado tus condiciones sin rechistar.", "prompt": "puppet strings shadow dark 8k"},
+            {"texto": "Desbloquea las técnicas prohibidas de negociación en el enlace fijado.", "prompt": "locked leather diary dark aesthetic"}
+        ]
+    },
+    "8. Leer el lenguaje corporal": {
+        "cabecera": "DETECTA LA VERDAD OCULTA",
+        "titulo_yt": "Lo que Sus Pies Dicen de Ti (Lenguaje Corporal Oculto) #shorts",
+        "libro_afiliado": "El Cuerpo Habla (Joe Navarro)",
+        "escenas": [
+            {"texto": "La cara puede mentir a la perfección, pero los pies jamás lo hacen.", "prompt": "feet stepping on dark floor dramatic light 8k"},
+            {"texto": "Si alguien apunta con los pies hacia la salida, desea marcharte aunque sonría.", "prompt": "person looking at watch dark room 8k"},
+            {"texto": "Analiza las microexpresiones y descubre quién te esconde la verdad.", "prompt": "close up eyes detective dark 8k"},
+            {"texto": "Conviértete en un experto leyendo personas con el libro del comentario fijado.", "prompt": "magnifying glass over dark text book"}
+        ]
     }
 }
 
