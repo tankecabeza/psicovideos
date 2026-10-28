@@ -1,0 +1,59 @@
+name: Bot Automatico PsicoVideos
+
+on:
+  schedule:
+    # Se ejecuta todos los días a las 20:30 UTC (22:30 en España peninsular en horario de verano, 21:30 en invierno)
+    - cron: '30 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar-video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25 # Le damos más margen porque renderizar vídeo consume tiempo
+
+    steps:
+      - name: 1. Descargar código
+        uses: actions/checkout@v4
+
+      - name: 2. Instalar dependencias del sistema (FFMPEG para vídeo)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu
+
+      - name: 3. Instalar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: 4. Restaurar caché de Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('requirements.txt') }}
+
+      - name: 5. Instalar librerías Python
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: 6. Fabricar y subir el vídeo
+        env:
+          YOUTUBE_STATE: ${{ secrets.YOUTUBE_STATE }}
+          TIKTOK_STATE: ${{ secrets.TIKTOK_STATE }}
+          LINK_AFILIADO: ${{ secrets.LINK_AFILIADO }}
+        run: python auto_psico_video.py
+
+      - name: 7. Guardar historial de guiones usados
+        if: always()
+        run: |
+          git config user.name "Psico-Bot"
+          git config user.email "bot@users.noreply.github.com"
+          [ -f historial_videos.txt ] && git add historial_videos.txt
+          if git diff --cached --quiet; then
+            echo "Sin cambios en el historial."
+            exit 0
+          fi
+          git commit -m "Vídeo publicado añadido al historial"
+          git pull --rebase origin main && git push origin HEAD:main
