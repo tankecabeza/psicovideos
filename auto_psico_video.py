@@ -15,7 +15,8 @@ LINK_AFILIADO = os.getenv("LINK_AFILIADO", "")
 
 HISTORIAL = Path("historial_videos.txt")
 VIDEO_OUT = "video_final.mp4"
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
 # ---------------------------------------------------------------
 # GUIONES: sustituye por los tuyos
@@ -91,12 +92,53 @@ def renderizar_video(guion, salida=VIDEO_OUT, duracion=20):
 
 
 # ---------------------------------------------------------------
-# Utilidades de estado (cookies)
+# Utilidades de estado (cookies) — con normalización de sameSite
 # ---------------------------------------------------------------
+def _normalizar_cookie(c):
+    """Convierte una cookie exportada por una extensión al formato de Playwright."""
+    mapa_same_site = {
+        "no_restriction": "None",
+        "none": "None",
+        "unspecified": "Lax",
+        "lax": "Lax",
+        "strict": "Strict",
+    }
+    ss = str(c.get("sameSite", "")).strip().lower()
+    same_site = mapa_same_site.get(ss, "Lax")
+
+    cookie = {
+        "name": c["name"],
+        "value": c["value"],
+        "domain": c["domain"],
+        "path": c.get("path", "/"),
+        "httpOnly": bool(c.get("httpOnly", False)),
+        "secure": bool(c.get("secure", False)),
+        "sameSite": same_site,
+    }
+
+    # Playwright exige secure=True cuando sameSite=None
+    if same_site == "None":
+        cookie["secure"] = True
+
+    exp = c.get("expirationDate", c.get("expires"))
+    if isinstance(exp, (int, float)) and exp > 0:
+        cookie["expires"] = float(exp)
+    else:
+        cookie["expires"] = -1  # cookie de sesión
+
+    return cookie
+
+
 def preparar_estado(raw, nombre_archivo):
     data = json.loads(raw)
+
+    # Puede venir como lista de cookies o como storage_state completo
     if isinstance(data, list):
         data = {"cookies": data, "origins": []}
+
+    data["cookies"] = [_normalizar_cookie(c) for c in data.get("cookies", [])]
+    data.setdefault("origins", [])
+
     with open(nombre_archivo, "w", encoding="utf-8") as f:
         json.dump(data, f)
     return nombre_archivo
@@ -137,8 +179,10 @@ async def subir_youtube(page, video_path, titulo, descripcion):
     # Esperar a que termine la subida antes de publicar
     for _ in range(60):
         estado = await page.locator("ytcp-video-upload-progress").inner_text()
-        if "Subida completa" in estado or "Upload complete" in estado or "Procesando" in estado \
-           or "Processing" in estado or "Comprobaciones" in estado or "Checks" in estado:
+        if any(s in estado for s in (
+            "Subida completa", "Upload complete", "Procesando",
+            "Processing", "Comprobaciones", "Checks",
+        )):
             break
         await page.wait_for_timeout(3000)
 
@@ -231,7 +275,10 @@ async def despachador_redes(video_path, titulo_yt, link):
                 except Exception as e:
                     log(f"❌ Error subiendo a {nombre}: {e}")
                     errores.append(f"{nombre}: {e}")
-                    await page.screenshot(path=f"error_{nombre}.png", full_page=True)
+                    try:
+                        await page.screenshot(path=f"error_{nombre}.png", full_page=True)
+                    except Exception:
+                        pass
             except Exception as e:
                 log(f"❌ Error preparando {nombre}: {e}")
                 errores.append(f"{nombre}: {e}")
