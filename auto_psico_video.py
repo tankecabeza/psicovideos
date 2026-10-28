@@ -10,14 +10,14 @@ import requests
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import edge_tts
-from moviepy.editor import ImageClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips
+from moviepy import ImageClip, AudioFileClip, CompositeAudioClip, concatenate_videoclips
 
 # Parche Pillow para MoviePy
 if not hasattr(Image, "ANTIALIAS"):
     Image.ANTIALIAS = Image.LANCZOS
 
 # ==============================================================================
-# CONFIGURACIÓN (DATOS DIRECTOS PARA EVITAR FALLOS)
+# CONFIGURACIÓN (DATOS DIRECTOS DE TELEGRAM)
 # ==============================================================================
 TELEGRAM_TOKEN = "8776916130:AAHHTnpFXzTmCXHmjiQ0vTUqCgnRaXvna58"
 TELEGRAM_CHAT_ID = "-100439562268"
