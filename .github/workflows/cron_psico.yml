@@ -2,12 +2,14 @@ name: Bot Automatico PsicoVideos
 
 on:
   schedule:
-    # 4 vídeos al día en los picos de máxima audiencia hispana (horas UTC)
     - cron: '0 10 * * *'
     - cron: '0 14 * * *'
     - cron: '0 19 * * *'
     - cron: '0 23 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   publicar-video:
@@ -29,7 +31,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --no-cache-dir -r requirements.txt
+          pip install -r requirements.txt
 
       - name: Fabricar y enviar el vídeo
         env:
@@ -44,4 +46,4 @@ jobs:
           git add historial_videos.txt || true
           git commit -m "Vídeo publicado añadido al historial" || echo "Sin cambios en el historial."
           git pull --rebase origin main || true
-          git push origin HEAD:main || true
+          git push origin HEAD:main
