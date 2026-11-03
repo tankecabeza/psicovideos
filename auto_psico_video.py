@@ -140,7 +140,7 @@ PACK_GUIONES = {
             {"texto": "Tienes la guía maestra de persuasión en los enlaces de la descripción.", "prompt": "silver key on dark velvet cushion"}
         ]
     },
-    "11.El Efecto Franklin": {
+    "11. El Efecto Franklin": {
         "cabecera": "CONVIERTE ENEMIGOS EN ALIADOS",
         "titulo_yt": "El Efecto Ben Franklin: Cómo Hacer que un Enemigo te Aprecie #Shorts #Psicologia",
         "escenas": [
@@ -296,10 +296,9 @@ def guardar_historial(tema):
         f.write(f"{tema}\n")
 
 # ==============================================================================
-# GENERADOR PROCEDURAL DE EMERGENCIA (CERO FONDOS LISOS)
+# GENERADOR PROCEDURAL DE EMERGENCIA (COMPATIBLE CON PILLOW 13)
 # ==============================================================================
 def generar_fondo_procedural_oscuro(ruta_img: str, seed: int):
-    """Si Pollinations falla tras todos los reintentos, genera un arte oscuro con luz y grano."""
     rng = np.random.default_rng(seed)
     W, H = 1080, 1920
     y, x = np.ogrid[:H, :W]
@@ -310,11 +309,11 @@ def generar_fondo_procedural_oscuro(ruta_img: str, seed: int):
     glow = np.clip(1.0 - dist / 950.0, 0, 1) ** 2.2
 
     paletas = [
-        (75, 20, 35),   # Carmesí oscuro
-        (18, 52, 85),   # Azul medianoche
-        (70, 52, 18),   # Bronce / Dorado viejo
-        (20, 65, 55),   # Verde esmeralda sombrío
-        (55, 25, 75),   # Púrpura profundo
+        (75, 20, 35),
+        (18, 52, 85),
+        (70, 52, 18),
+        (20, 65, 55),
+        (55, 25, 75),
     ]
     c = paletas[seed % len(paletas)]
     ruido = rng.normal(0, 4.5, (H, W))
@@ -323,36 +322,40 @@ def generar_fondo_procedural_oscuro(ruta_img: str, seed: int):
     g = np.clip(10 + glow * c[1] + ruido, 0, 255).astype(np.uint8)
     b = np.clip(16 + glow * c[2] + ruido, 0, 255).astype(np.uint8)
 
-    img = Image.fromarray(np.dstack([r, g, b]), "RGB")
+    # Sin el parámetro "RGB" deprecado en Pillow 13
+    img = Image.fromarray(np.dstack([r, g, b]))
     dr = ImageDraw.Draw(img)
-    # Líneas sutiles de composición cinematográfica
     for _ in range(4):
         x0 = int(rng.integers(80, W - 80))
         dr.line([(x0, 0), (x0, H)], fill=(255, 255, 255), width=1)
     img.save(ruta_img, quality=92)
 
 # ==============================================================================
-# DESCARGA DE IMÁGENES IA CON REINTENTOS Y PAUSA ANTI-BLOQUEO
+# DESCARGA DE IMÁGENES IA CON ROTACIÓN DE ENDPOINTS (ANTI-402)
 # ==============================================================================
 def descargar_fondo_ia(prompt: str, ruta_img: str, seed: int):
-    prm = urllib.parse.quote(f"{prompt}, vertical 9:16, dark moody cinematography, hyperrealistic, dramatic shadows, no text, no watermark")
-    
-    # Pedimos 720x1280 para evitar timeouts/402 de Pollinations y reescalamos luego a 1080x1920
+    prm = urllib.parse.quote(f"{prompt}, vertical 9:16, dark moody cinematography, hyperrealistic, dramatic shadows, no text")
+
+    # Alternamos entre endpoints y omitimos modelos de pago que disparan el error 402
     urls_intento = [
-        f"https://image.pollinations.ai/prompt/{prm}?width=720&height=1280&seed={seed}&nologo=true&model=flux",
-        f"https://image.pollinations.ai/prompt/{prm}?width=720&height=1280&seed={seed + 7}&nologo=true&model=turbo",
-        f"https://image.pollinations.ai/prompt/{prm}?width=720&height=1280&seed={seed + 13}&nologo=true",
+        f"https://image.pollinations.ai/prompt/{prm}?width=576&height=1024&seed={seed}&nologo=true",
+        f"https://pollinations.ai/p/{prm}?width=576&height=1024&seed={seed + 11}&nologo=true",
+        f"https://image.pollinations.ai/prompt/{prm}?width=512&height=910&seed={seed + 29}&nologo=true&model=turbo",
     ]
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-    }
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+        "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
+    ]
 
     for intento, url in enumerate(urls_intento, 1):
         try:
-            # Pausa preventiva para no disparar el bloqueo 402/429 por exceso de velocidad
-            time.sleep(2.2 * intento)
-            r = requests.get(url, headers=headers, timeout=40)
+            time.sleep(3.5 * intento)
+            headers = {
+                "User-Agent": user_agents[(intento - 1) % len(user_agents)],
+                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            }
+            r = requests.get(url, headers=headers, timeout=45)
             if r.status_code == 200 and len(r.content) > 8000:
                 with open(ruta_img, "wb") as f:
                     f.write(r.content)
@@ -361,7 +364,7 @@ def descargar_fondo_ia(prompt: str, ruta_img: str, seed: int):
                 print(f"   🖼️ Imagen IA descargada con éxito (Intento {intento})", flush=True)
                 return
             else:
-                print(f"   ⚠️ Intento {intento} devolvió status {r.status_code}. Probando siguiente motor...", flush=True)
+                print(f"   ⚠️ Intento {intento} devolvió status {r.status_code}. Probando siguiente servidor...", flush=True)
         except Exception as e:
             print(f"   ⚠️ Intento {intento} falló ({e}). Reintentando...", flush=True)
 
@@ -369,7 +372,7 @@ def descargar_fondo_ia(prompt: str, ruta_img: str, seed: int):
     generar_fondo_procedural_oscuro(ruta_img, seed)
 
 # ==============================================================================
-# AUDIO Y SUBTÍTULOS (CON ARREGLO DE PALABRAS PERDIDAS)
+# AUDIO Y SUBTÍTULOS
 # ==============================================================================
 def crear_musica_fondo(filepath: str, duracion: float, sr: int = 44100):
     t = np.linspace(0, duracion, int(sr * duracion), False)
@@ -389,7 +392,6 @@ async def sintetizar_voz(texto: str, voz: str, ruta_mp3: str):
     await comunicador.save(ruta_mp3)
 
 def dividir_en_lineas(texto_mayus: str, max_chars: int = 18):
-    """Divide el texto garantizando que NUNCA se pierda ninguna palabra."""
     palabras = texto_mayus.split()
     lineas = []
     actual = []
@@ -408,8 +410,7 @@ def quemar_textos(ruta_in, cabecera, texto, num_escena, total_escenas, ruta_out)
     img = Image.open(ruta_in).convert("RGBA").resize((1080, 1920), Image.LANCZOS)
     capa = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
     dr_capa = ImageDraw.Draw(capa)
-    
-    # Bandas oscuras semitransparentes para legibilidad perfecta
+
     dr_capa.rectangle([(0, 0), (1080, 230)], fill=(0, 0, 0, 165))
     dr_capa.rectangle([(0, 1100), (1080, 1720)], fill=(0, 0, 0, 140))
     img = Image.alpha_composite(img, capa).convert("RGB")
@@ -485,7 +486,6 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
         print("❌ Faltan credenciales de Telegram.")
         return False
 
-    # Garantizamos que el título de YouTube jamás supere los 100 caracteres
     titulo_yt_limpio = titulo_yt[:100].strip()
 
     descripcion_yt = (
@@ -506,7 +506,6 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
     url_msg = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
     try:
-        # 1. Enviamos el archivo de vídeo limpio para descargar rápido
         with open(video_path, "rb") as vid:
             r1 = requests.post(
                 url_video,
@@ -525,7 +524,6 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
             print(f"❌ Error subiendo vídeo: {r1.text}")
             return False
 
-        # 2. Enviamos un mensaje de texto con los 3 bloques separados listos para tocar y copiar
         texto_copiable = (
             f"📋 <b>TOCA CADA CAJA PARA COPIARLA AL PORTAPAPELES:</b>\n\n"
             f"1️⃣ <b>TÍTULO YOUTUBE SHORTS ({len(titulo_yt_limpio)}/100 caract.):</b>\n"
