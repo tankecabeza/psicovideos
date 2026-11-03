@@ -2,7 +2,11 @@ name: Bot Automatico PsicoVideos
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
+    # 4 vídeos al día en los picos de máxima audiencia hispana (horas UTC)
+    - cron: '0 10 * * *'
+    - cron: '0 14 * * *'
+    - cron: '0 19 * * *'
+    - cron: '0 23 * * *'
   workflow_dispatch:
 
 jobs:
@@ -31,7 +35,6 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          LINK_AFILIADO: ${{ secrets.LINK_AFILIADO }}
         run: python -u auto_psico_video.py
 
       - name: Commit and push historial
