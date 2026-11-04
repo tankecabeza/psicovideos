@@ -359,14 +359,14 @@ def descargar_fondo_ia(prompt: str, ruta_img: str, seed: int):
                     f.write(r.content)
                 im = Image.open(ruta_img).convert("RGB").resize((1080, 1920), Image.LANCZOS)
                 im.save(ruta_img, quality=95)
-                print(f"   🖼️ Imagen IA descargada con éxito (Intento {intento})", flush=True)
+                print(f"    🖼️ Imagen IA descargada con éxito (Intento {intento})", flush=True)
                 return
             else:
-                print(f"   ⚠️ Intento {intento} devolvió status {r.status_code}. Probando siguiente servidor...", flush=True)
+                print(f"    ⚠️ Intento {intento} devolvió status {r.status_code}. Probando siguiente servidor...", flush=True)
         except Exception as e:
-            print(f"   ⚠️ Intento {intento} falló ({e}). Reintentando...", flush=True)
+            print(f"    ⚠️ Intento {intento} falló ({e}). Reintentando...", flush=True)
 
-    print("   🎨 Activando generador procedural atmosférico de respaldo.", flush=True)
+    print("    🎨 Activando generador procedural atmosférico de respaldo.", flush=True)
     generar_fondo_procedural_oscuro(ruta_img, seed)
 
 # ==============================================================================
@@ -551,11 +551,16 @@ def enviar_a_make(video_path, titulo_yt, libro_elegido):
         print("⚠️ No hay MAKE_WEBHOOK_URL en los Secrets. Omitiendo autopublicación.")
         return False
 
-    print("☁️ Subiendo vídeo a servidor temporal para Make.com...")
+    print("☁️ Subiendo vídeo a servidor temporal alternativo para Make.com...")
     try:
         with open(video_path, 'rb') as f:
-            r_up = requests.post("https://catbox.moe/user/api.php", data={"reqtype": "fileupload"}, files={"fileToUpload": f})
+            r_up = requests.post("https://0x0.st", files={"file": f}, timeout=120)
+        
         video_url = r_up.text.strip()
+        if r_up.status_code != 200 or not video_url.startswith("http"):
+            print(f"❌ Error en el servidor temporal: {r_up.text}")
+            return False
+            
         print(f"✅ Vídeo subido temporalmente a: {video_url}")
     except Exception as e:
         print(f"❌ Error subiendo vídeo a la nube temporal: {e}")
@@ -578,7 +583,7 @@ def enviar_a_make(video_path, titulo_yt, libro_elegido):
         "desc_youtube": descripcion_yt,
         "desc_tiktok": descripcion_tiktok
     }
-    r = requests.post(MAKE_WEBHOOK, json=payload)
+    r = requests.post(MAKE_WEBHOOK, json=payload, timeout=30)
     if r.status_code == 200:
         print("✅ ¡Orden recibida por Make.com!")
         return True
