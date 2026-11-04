@@ -2,12 +2,14 @@ name: Bot Automatico PsicoVideos
 
 on:
   schedule:
+    # Publica automáticamente 4 veces al día (horas UTC)
     - cron: '0 10 * * *'
     - cron: '0 14 * * *'
     - cron: '0 19 * * *'
     - cron: '0 23 * * *'
   workflow_dispatch:
 
+# Permiso obligatorio para que GitHub no dé error 403 al guardar el historial
 permissions:
   contents: write
 
@@ -37,6 +39,8 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Tu webhook de Make integrado directamente aquí:
+          MAKE_WEBHOOK_URL: "https://hook.eu1.make.com/7jk7czycxvf7vpmcuwzc9o853owj5r8l"
         run: python -u auto_psico_video.py
 
       - name: Commit and push historial
