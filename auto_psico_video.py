@@ -322,7 +322,6 @@ def generar_fondo_procedural_oscuro(ruta_img: str, seed: int):
     g = np.clip(10 + glow * c[1] + ruido, 0, 255).astype(np.uint8)
     b = np.clip(16 + glow * c[2] + ruido, 0, 255).astype(np.uint8)
 
-    # Sin el parámetro "RGB" deprecado en Pillow 13
     img = Image.fromarray(np.dstack([r, g, b]))
     dr = ImageDraw.Draw(img)
     for _ in range(4):
@@ -331,12 +330,11 @@ def generar_fondo_procedural_oscuro(ruta_img: str, seed: int):
     img.save(ruta_img, quality=92)
 
 # ==============================================================================
-# DESCARGA DE IMÁGENES IA CON ROTACIÓN DE ENDPOINTS (ANTI-402)
+# DESCARGA DE IMÁGENES IA CON ROTACIÓN DE ENDPOINTS
 # ==============================================================================
 def descargar_fondo_ia(prompt: str, ruta_img: str, seed: int):
     prm = urllib.parse.quote(f"{prompt}, vertical 9:16, dark moody cinematography, hyperrealistic, dramatic shadows, no text")
 
-    # Alternamos entre endpoints y omitimos modelos de pago que disparan el error 402
     urls_intento = [
         f"https://image.pollinations.ai/prompt/{prm}?width=576&height=1024&seed={seed}&nologo=true",
         f"https://pollinations.ai/p/{prm}?width=576&height=1024&seed={seed + 11}&nologo=true",
@@ -491,8 +489,7 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
     descripcion_yt = (
         f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
         f"🎧 Prueba Audible 30 días GRATIS (Audiolibros ilimitados): {LINK_AUDIBLE}\n\n"
-        f"📚 Libro recomendado de hoy:\n"
-        f"{libro_elegido['titulo']}\n"
+        f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
         f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
         f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
     )
@@ -546,6 +543,50 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
         return False
 
 # ==============================================================================
+# ENVÍO A MAKE.COM (AUTOPUBLICACIÓN CERO CLICS)
+# ==============================================================================
+def enviar_a_make(video_path, titulo_yt, libro_elegido):
+    MAKE_WEBHOOK = os.getenv("MAKE_WEBHOOK_URL")
+    if not MAKE_WEBHOOK:
+        print("⚠️ No hay MAKE_WEBHOOK_URL en los Secrets. Omitiendo autopublicación.")
+        return False
+
+    print("☁️ Subiendo vídeo a servidor temporal para Make.com...")
+    try:
+        with open(video_path, 'rb') as f:
+            r_up = requests.post("https://catbox.moe/user/api.php", data={"reqtype": "fileupload"}, files={"fileToUpload": f})
+        video_url = r_up.text.strip()
+        print(f"✅ Vídeo subido temporalmente a: {video_url}")
+    except Exception as e:
+        print(f"❌ Error subiendo vídeo a la nube temporal: {e}")
+        return False
+
+    titulo_yt_limpio = titulo_yt[:100].strip()
+    descripcion_yt = (
+        f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
+        f"🎧 Prueba Audible 30 días GRATIS (Audiolibros ilimitados): {LINK_AUDIBLE}\n\n"
+        f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
+        f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
+        f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion"
+    )
+    descripcion_tiktok = f"{titulo_yt_limpio} 🧠 Audiolibro GRATIS en el link de mi perfil🔗 #psicologia #psicologiaoscura #manipulacion"
+
+    print("🚀 Disparando orden a Make.com...")
+    payload = {
+        "video_url": video_url,
+        "titulo": titulo_yt_limpio,
+        "desc_youtube": descripcion_yt,
+        "desc_tiktok": descripcion_tiktok
+    }
+    r = requests.post(MAKE_WEBHOOK, json=payload)
+    if r.status_code == 200:
+        print("✅ ¡Orden recibida por Make.com!")
+        return True
+    else:
+        print(f"❌ Error conectando con Make: {r.status_code} - {r.text}")
+        return False
+
+# ==============================================================================
 # EJECUCIÓN PRINCIPAL
 # ==============================================================================
 if __name__ == "__main__":
@@ -562,8 +603,12 @@ if __name__ == "__main__":
     libro_al_azar = random.choice(LIBROS_AFILIADOS)
 
     ruta_mp4 = producir_video(clave_elegida, datos)
-    if enviar_pack_telegram(ruta_mp4, datos["titulo_yt"], libro_al_azar):
-        guardar_historial(clave_elegida)
-        print("🎉 Proceso completado con éxito.")
-    else:
-        sys.exit(1)
+    
+    # 1. Avisa por Telegram
+    enviar_pack_telegram(ruta_mp4, datos["titulo_yt"], libro_al_azar)
+    
+    # 2. Envía a Make para la publicación automática
+    enviar_a_make(ruta_mp4, datos["titulo_yt"], libro_al_azar)
+    
+    guardar_historial(clave_elegida)
+    print("🎉 Proceso completado con éxito.")
