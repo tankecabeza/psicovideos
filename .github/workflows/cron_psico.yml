@@ -39,8 +39,9 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # Tu webhook de Make integrado directamente aquí:
-          MAKE_WEBHOOK_URL: "https://hook.eu1.make.com/7jk7czycxvf7vpmcuwzc9o853owj5r8l"
+          INSTA_USER: ${{ secrets.INSTA_USER }}
+          INSTA_PASS: ${{ secrets.INSTA_PASS }}
+          INSTA_SESSION: ${{ secrets.INSTA_SESSION }}
         run: python -u auto_psico_video.py
 
       - name: Commit and push historial
