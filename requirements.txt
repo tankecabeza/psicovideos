@@ -4,3 +4,6 @@ Pillow
 edge-tts
 moviepy==1.0.3
 instagrapi==2.6.6
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
