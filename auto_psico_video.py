@@ -157,7 +157,7 @@ PACK_GUIONES = {
         "escenas": [
             {"texto": "En cualquier negociación, la primera cifra que se dice en voz alta gana la partida.", "prompt": "boardroom table dark moody skyscraper view"},
             {"texto": "Se llama Sesgo de Anclaje: el cerebro usa el primer número como referencia absoluta.", "prompt": "heavy ship anchor underwater dark blue abyss"},
-            {"texto": "Si pides primero algo elevado, la contraoferta siempre será mucho más alta de normal.", "prompt": "stack of gold coins in dark shadow"},
+            {"texto": "Si pides primero algo elevado, la contraoferta siempre será mucho más alta de lo normal.", "prompt": "stack of gold coins in dark shadow"},
             {"texto": "Domina el arte de negociar con los libros recomendados en la descripción.", "prompt": "briefcase on dark leather chair"}
         ]
     },
@@ -436,7 +436,7 @@ def producir_video(clave, datos):
     mezcla = CompositeAudioClip([final.audio, bgm])
     mp4_out = os.path.join(carpeta, "VIDEO_FINAL.mp4")
     
-    # Parámetros FFmpeg mejorados para evitar rechazos en Instagram/Telegram
+    # Parámetros FFmpeg mejorados para evitar rechazos
     final.set_audio(mezcla).write_videofile(
         mp4_out, fps=24, codec="libx264", audio_codec="aac",
         preset="veryfast", ffmpeg_params=["-pix_fmt", "yuv420p", "-crf", "23"], logger=None
@@ -444,7 +444,7 @@ def producir_video(clave, datos):
     return mp4_out
 
 # ==============================================================================
-# ENVÍO A TELEGRAM (CON #PUBLI AÑADIDO)
+# ENVÍO A TELEGRAM
 # ==============================================================================
 def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
@@ -455,7 +455,7 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
 
     descripcion_yt = (
         f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-        f"🎧 Prueba Audible 30 días GRATIS (Audiolibros ilimitados): {LINK_AUDIBLE}\n\n"
+        f"🎧 Prueba Audible 30 días GRATIS (Audiolibros ilimitados):\n{LINK_AUDIBLE}\n\n"
         f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
         f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
         f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion"
@@ -504,7 +504,7 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
         return False
 
 # ==============================================================================
-# ENVÍO A INSTAGRAM (CON INYECCIÓN DE SESIÓN E IMPORT PEREZOSO)
+# ENVÍO A INSTAGRAM (CON PARCHE 404 Y TEXTOS COMPLETOS DE AFILIADO)
 # ==============================================================================
 def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
     INSTA_USER = os.getenv("INSTA_USER")
@@ -516,21 +516,29 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
         return False
 
     titulo_limpio = titulo_yt[:100].strip()
+    
+    # Formato calcado a la imagen de ejemplo (con enlaces y #publi)
     descripcion_ig = (
         f"{titulo_limpio}\n\n"
-        f"🎧 Prueba Audible 30 días GRATIS (link en mi bio)\n"
-        f"📚 Libro de hoy: {libro_elegido['titulo']}\n\n"
-        f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion"
+        f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
+        f"🎧 Prueba Audible 30 días GRATIS (Audiolibros ilimitados):\n{LINK_AUDIBLE}\n\n"
+        f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
+        f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
+        f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
     )
 
     print("📱 Conectando a Instagram mediante sesión inyectada...")
     try:
-        # Import perezoso para que si hay conflicto, no reviente todo el bot
         from instagrapi import Client
         
         cl = Client()
         cl.delay_range = [2, 6] 
-        cl.set_settings(json.loads(INSTA_SESSION))
+        
+        # Parche para saltarse el endpoint roto 404 qe/expose
+        sesion_guardada = json.loads(INSTA_SESSION)
+        cl.settings = sesion_guardada
+        cl.set_settings(sesion_guardada)
+        
         cl.login(INSTA_USER, INSTA_PASS)
         
         print("🚀 Subiendo Reel a Instagram...")
@@ -538,7 +546,7 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
             video_path,
             descripcion_ig,
             extra_data={
-                "custom_accessibility_caption": "Vídeo animado de psicología.",
+                "custom_accessibility_caption": "Vídeo animado de psicología y comportamiento humano.",
                 "like_and_view_counts_disabled": 0,
                 "disable_comments": 0,
             }
@@ -567,10 +575,10 @@ if __name__ == "__main__":
 
     ruta_mp4 = producir_video(clave_elegida, datos)
     
-    # 1. Enviar primero a Telegram (Garantiza que lo recibes siempre)
+    # 1. Enviar primero a Telegram
     exito_telegram = enviar_pack_telegram(ruta_mp4, datos["titulo_yt"], libro_al_azar)
     
-    # 2. Publicar en Instagram usando la sesión guardada
+    # 2. Publicar en Instagram (ahora con los enlaces de afiliado idénticos a la captura)
     exito_ig = publicar_instagram_reel(ruta_mp4, datos["titulo_yt"], libro_al_azar)
     
     # Solo guarda en el historial si AL MENOS una plataforma lo recibió bien. 
