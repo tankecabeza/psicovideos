@@ -13,3 +13,4 @@
 10. Técnica del Espejo
 5. El Efecto Halo
 19. El Efecto Dunning-Kruger
+4. Triangulación Visual
