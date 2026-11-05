@@ -297,7 +297,7 @@ def guardar_historial(tema):
         f.write(f"{tema}\n")
 
 # ==============================================================================
-# GENERADOR PROCEDURAL DE EMERGENCIA (COMPATIBLE CON PILLOW 13)
+# GENERADOR PROCEDURAL DE EMERGENCIA
 # ==============================================================================
 def generar_fondo_procedural_oscuro(ruta_img: str, seed: int):
     rng = np.random.default_rng(seed)
@@ -459,19 +459,24 @@ def producir_video(clave, datos):
         descargar_fondo_ia(esc["prompt"], r_raw, random.randint(100, 99999))
         quemar_textos(r_raw, datos["cabecera"], esc["texto"], i, len(datos["escenas"]), r_sub)
 
-        base = ImageClip(r_sub).with_duration(dur)
-        zoom = base.resized(lambda t: 1.0 + 0.032 * t).with_position(("center", "center"))
-        escena = CompositeVideoClip([zoom], size=(1080, 1920)).with_duration(dur).with_audio(audio)
+        # Sintaxis adaptada a moviepy 1.0.3
+        base = ImageClip(r_sub).set_duration(dur)
+        zoom = base.resize(lambda t: 1.0 + 0.032 * t).set_position(("center", "center"))
+        escena = CompositeVideoClip([zoom], size=(1080, 1920)).set_duration(dur).set_audio(audio)
         clips.append(escena)
 
     final = concatenate_videoclips(clips, method="compose")
     r_bgm = os.path.join(carpeta, "bgm.wav")
     crear_musica_fondo(r_bgm, final.duration)
-    bgm = AudioFileClip(r_bgm).with_volume_scaled(0.18).with_duration(final.duration)
+    
+    # Sintaxis adaptada a moviepy 1.0.3
+    bgm = AudioFileClip(r_bgm).volumex(0.18).set_duration(final.duration)
 
     mezcla = CompositeAudioClip([final.audio, bgm])
     mp4_out = os.path.join(carpeta, "VIDEO_FINAL.mp4")
-    final.with_audio(mezcla).write_videofile(
+    
+    # Sintaxis adaptada a moviepy 1.0.3
+    final.set_audio(mezcla).write_videofile(
         mp4_out, fps=24, codec="libx264", audio_codec="aac",
         preset="ultrafast", logger=None
     )
