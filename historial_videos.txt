@@ -12,3 +12,4 @@
 21. Ley de Parkinson
 10. Técnica del Espejo
 5. El Efecto Halo
+19. El Efecto Dunning-Kruger
