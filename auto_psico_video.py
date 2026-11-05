@@ -15,6 +15,11 @@ from moviepy.editor import (
     CompositeVideoClip, concatenate_videoclips,
 )
 
+# Imports para YouTube API
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+
 if not hasattr(Image, "ANTIALIAS"):
     Image.ANTIALIAS = Image.LANCZOS
 
@@ -420,7 +425,6 @@ def producir_video(clave, datos):
         descargar_fondo_ia(esc["prompt"], r_raw, random.randint(100, 99999))
         quemar_textos(r_raw, datos["cabecera"], esc["texto"], i, len(datos["escenas"]), r_sub)
 
-        # Sintaxis estricta MoviePy 1.0.3
         base = ImageClip(r_sub).set_duration(dur)
         zoom = base.resize(lambda t: 1.0 + 0.032 * t).set_position(("center", "center"))
         escena = CompositeVideoClip([zoom], size=(1080, 1920)).set_duration(dur).set_audio(audio)
@@ -430,13 +434,11 @@ def producir_video(clave, datos):
     r_bgm = os.path.join(carpeta, "bgm.wav")
     crear_musica_fondo(r_bgm, final.duration)
     
-    # Sintaxis estricta MoviePy 1.0.3
     bgm = AudioFileClip(r_bgm).volumex(0.18).set_duration(final.duration)
 
     mezcla = CompositeAudioClip([final.audio, bgm])
     mp4_out = os.path.join(carpeta, "VIDEO_FINAL.mp4")
     
-    # Parámetros FFmpeg mejorados para evitar rechazos
     final.set_audio(mezcla).write_videofile(
         mp4_out, fps=24, codec="libx264", audio_codec="aac",
         preset="veryfast", ffmpeg_params=["-pix_fmt", "yuv420p", "-crf", "23"], logger=None
@@ -504,7 +506,7 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
         return False
 
 # ==============================================================================
-# ENVÍO A INSTAGRAM (CON PARCHE 404 Y TEXTOS COMPLETOS DE AFILIADO)
+# ENVÍO A INSTAGRAM
 # ==============================================================================
 def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
     INSTA_USER = os.getenv("INSTA_USER")
@@ -512,12 +514,10 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
     INSTA_SESSION = os.getenv("INSTA_SESSION")
     
     if not all([INSTA_USER, INSTA_PASS, INSTA_SESSION]):
-        print("⚠️ Faltan credenciales o sesión de Instagram en los Secrets. Omitiendo subida.")
+        print("⚠️ Faltan credenciales de Instagram. Omitiendo.")
         return False
 
     titulo_limpio = titulo_yt[:100].strip()
-    
-    # Formato calcado a la imagen de ejemplo (con enlaces y #publi)
     descripcion_ig = (
         f"{titulo_limpio}\n\n"
         f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
@@ -530,11 +530,9 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
     print("📱 Conectando a Instagram mediante sesión inyectada...")
     try:
         from instagrapi import Client
-        
         cl = Client()
         cl.delay_range = [2, 6] 
         
-        # Parche para saltarse el endpoint roto 404 qe/expose
         sesion_guardada = json.loads(INSTA_SESSION)
         cl.settings = sesion_guardada
         cl.set_settings(sesion_guardada)
@@ -558,6 +556,71 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
         return False
 
 # ==============================================================================
+# ENVÍO AUTOMÁTICO A YOUTUBE SHORTS
+# ==============================================================================
+def publicar_youtube_short(video_path, titulo_yt, libro_elegido):
+    YT_CLIENT_ID = os.getenv("YT_CLIENT_ID")
+    YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET")
+    YT_REFRESH_TOKEN = os.getenv("YT_REFRESH_TOKEN")
+
+    if not all([YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN]):
+        print("⚠️ Faltan credenciales de YouTube en los Secrets. Omitiendo subida a YouTube.")
+        return False
+
+    print("📺 Conectando a YouTube Data API...")
+    try:
+        creds = Credentials(
+            None,
+            refresh_token=YT_REFRESH_TOKEN,
+            client_id=YT_CLIENT_ID,
+            client_secret=YT_CLIENT_SECRET,
+            token_uri="https://oauth2.googleapis.com/token"
+        )
+
+        youtube = build("youtube", "v3", credentials=creds)
+
+        descripcion_yt = (
+            f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
+            f"🎧 Prueba Audible 30 días GRATIS (Audiolibros ilimitados):\n{LINK_AUDIBLE}\n\n"
+            f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
+            f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
+            f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
+        )
+
+        body = {
+            "snippet": {
+                "title": titulo_yt,
+                "description": descripcion_yt,
+                "tags": ["psicologia", "shorts", "psicologia oscura", "desarrollo personal"],
+                "categoryId": "27"  # Educación
+            },
+            "status": {
+                "privacyStatus": "public",
+                "selfDeclaredMadeForKids": False
+            }
+        }
+
+        media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
+
+        request = youtube.videos().insert(
+            part="snippet,status",
+            body=body,
+            media_body=media
+        )
+
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            if status:
+                print(f"    Subiendo a YouTube: {int(status.progress() * 100)}%")
+
+        print(f"✅ ¡Short publicado con éxito en YouTube! ID: {response.get('id')}")
+        return True
+    except Exception as e:
+        print(f"❌ Error subiendo a YouTube: {e}")
+        return False
+
+# ==============================================================================
 # EJECUCIÓN PRINCIPAL CON CONTROL DE FALLOS
 # ==============================================================================
 if __name__ == "__main__":
@@ -575,14 +638,17 @@ if __name__ == "__main__":
 
     ruta_mp4 = producir_video(clave_elegida, datos)
     
-    # 1. Enviar primero a Telegram
+    # 1. Enviar a Telegram
     exito_telegram = enviar_pack_telegram(ruta_mp4, datos["titulo_yt"], libro_al_azar)
     
-    # 2. Publicar en Instagram (ahora con los enlaces de afiliado idénticos a la captura)
+    # 2. Publicar en Instagram
     exito_ig = publicar_instagram_reel(ruta_mp4, datos["titulo_yt"], libro_al_azar)
+
+    # 3. Publicar en YouTube Shorts
+    exito_yt = publicar_youtube_short(ruta_mp4, datos["titulo_yt"], libro_al_azar)
     
-    # Solo guarda en el historial si AL MENOS una plataforma lo recibió bien. 
-    if exito_telegram or exito_ig:
+    # Guarda en el historial si al menos una plataforma procesó el vídeo con éxito
+    if exito_telegram or exito_ig or exito_yt:
         guardar_historial(clave_elegida)
         print("🎉 Proceso completado con éxito.")
     else:
