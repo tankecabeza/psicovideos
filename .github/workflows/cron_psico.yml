@@ -42,6 +42,9 @@ jobs:
           INSTA_USER: ${{ secrets.INSTA_USER }}
           INSTA_PASS: ${{ secrets.INSTA_PASS }}
           INSTA_SESSION: ${{ secrets.INSTA_SESSION }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
         run: python -u auto_psico_video.py
 
       - name: Commit and push historial
