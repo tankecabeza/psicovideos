@@ -15,3 +15,4 @@
 19. El Efecto Dunning-Kruger
 4. Triangulación Visual
 2. Detectar mentiras FBI
+7. Efecto Zeigarnik
