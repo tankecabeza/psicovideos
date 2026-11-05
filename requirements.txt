@@ -2,5 +2,5 @@ requests
 numpy
 Pillow
 edge-tts
-moviepy
-instagrapi
+moviepy>=2.0.0.dev2
+instagrapi==2.6.6
