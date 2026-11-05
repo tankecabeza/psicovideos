@@ -16,3 +16,4 @@
 4. Triangulación Visual
 2. Detectar mentiras FBI
 7. Efecto Zeigarnik
+23. El Sesgo del Costo Hundido
