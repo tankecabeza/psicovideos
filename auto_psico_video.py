@@ -10,11 +10,10 @@ import json
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import edge_tts
-from moviepy import (
+from moviepy.editor import (
     ImageClip, AudioFileClip, CompositeAudioClip,
     CompositeVideoClip, concatenate_videoclips,
 )
-from instagrapi import Client
 
 if not hasattr(Image, "ANTIALIAS"):
     Image.ANTIALIAS = Image.LANCZOS
@@ -39,7 +38,7 @@ LIBROS_AFILIADOS = [
 ]
 
 # ==============================================================================
-# MEGA BASE DE DATOS DE GUIONES (Omitida visualmente aquí, mantén tu diccionario PACK_GUIONES intacto)
+# MEGA BASE DE DATOS DE GUIONES (24 TEMÁTICAS VARIADAS)
 # ==============================================================================
 PACK_GUIONES = {
     "1. Trucos contra manipuladores": {
@@ -52,7 +51,236 @@ PACK_GUIONES = {
             {"texto": "Tienes los mejores libros de persuasión y audiolibros gratis en la descripción.", "prompt": "ancient leather book with gold letters on dark desk"}
         ]
     },
-    # (AÑADE EL RESTO DE TUS 24 GUIONES AQUÍ, NO LOS HE BORRADO, SOLO ACORTADO POR ESPACIO)
+    "2. Detectar mentiras FBI": {
+        "cabecera": "TÉCNICAS DEL FBI",
+        "titulo_yt": "Cómo Saber si te Mienten en 5 Segundos según el FBI #Shorts #Psicologia",
+        "escenas": [
+            {"texto": "Así descubres a un mentiroso en menos de cinco segundos según exagentes del FBI.", "prompt": "dark interrogation room single hanging lamp cinematic"},
+            {"texto": "Si repite exactamente tu pregunta antes de responder, está ganando tiempo para inventar.", "prompt": "nervous man sweating in dark shadow portrait"},
+            {"texto": "Pídele que cuente la historia en orden inverso. Los mentirosos siempre se bloquean.", "prompt": "king chess piece falling on board dramatic lighting"},
+            {"texto": "Descubre los manuales de lectura corporal en los enlaces de la descripción.", "prompt": "top secret dossier folder on dark wooden table"}
+        ]
+    },
+    "3. El Efecto Escasez": {
+        "cabecera": "LA LEY DEL DESAPEGO",
+        "titulo_yt": "Por Qué Cuanto Más Das, Menos Te Valoran (Ley de Escasez) #Shorts #Psicologia",
+        "escenas": [
+            {"texto": "Deja de estar siempre disponible al instante para todo el mundo.", "prompt": "lone man walking away foggy street night neon"},
+            {"texto": "El cerebro humano desprecia lo abundante y se obsesiona con lo escaso.", "prompt": "luxury gold pocket watch on black velvet"},
+            {"texto": "Retira tu atención en silencio cuando no te valoren y empezarán a buscarte.", "prompt": "confident man silhouette looking out skyscraper window night"},
+            {"texto": "Domina las leyes de la persuasión con los libros recomendados en la descripción.", "prompt": "open book glowing with warm golden light in dark library"}
+        ]
+    },
+    "4. Triangulación Visual": {
+        "cabecera": "EL TRUCO DE LA MIRADA",
+        "titulo_yt": "El Truco Visual para Seducir o Intimidar en Segundos #Shorts #LenguajeCorporal",
+        "escenas": [
+            {"texto": "Usa la mirada triangular para controlar lo que otra persona siente al hablar contigo.", "prompt": "sharp eyes closeup dark moody portrait photography"},
+            {"texto": "Para generar atracción: mira a su ojo izquierdo, luego al derecho y baja a sus labios.", "prompt": "romantic silhouette couple dim neon lighting aesthetic"},
+            {"texto": "Para imponer respeto: mira a sus ojos y sube al centro de su frente. Desactivará su ego.", "prompt": "cold serious stare businessman dark background"},
+            {"texto": "Aprende todos los secretos del lenguaje corporal en el enlace de la descripción.", "prompt": "mysterious mask on dark marble table"}
+        ]
+    },
+    "5. El Efecto Halo": {
+        "cabecera": "EL SESGO DE LA BELLEZA",
+        "titulo_yt": "Por Qué la Gente Atractiva lo Tiene Más Fácil (Efecto Halo) #Shorts #Curiosidades",
+        "escenas": [
+            {"texto": "El efecto Halo es el sesgo inconsciente más poderoso de la mente humana.", "prompt": "silhouette with glowing halo light dark background"},
+            {"texto": "En solo medio segundo, tu cerebro asume que alguien bien vestido es más honesto y capaz.", "prompt": "elegant man adjusting tie in dark luxury hallway"},
+            {"texto": "Incluso en los tribunales, los acusados con buena presencia reciben penas un veinte por ciento menores.", "prompt": "wooden gavel on dark judge desk dramatic shadow"},
+            {"texto": "Hackea los sesgos de tu mente con los audiolibros gratis de la descripción.", "prompt": "glowing human brain digital art dark background"}
+        ]
+    },
+    "6. Gaslighting Sutil": {
+        "cabecera": "MANIPULACIÓN ENCUBIERTA",
+        "titulo_yt": "Si Alguien te Dice Estas 3 Frases, Te Está Manipulando #Shorts #PsicologiaOscura",
+        "escenas": [
+            {"texto": "El luz de gas o gaslighting es la técnica de manipulación más destructiva que existe.", "prompt": "person holding head in hands dark foggy room"},
+            {"texto": "Si te repiten frases como: estás loco, eres demasiado sensible o eso nunca pasó...", "prompt": "shadow of menacing figure on dark wall"},
+            {"texto": "Están reescribiendo tu memoria poco a poco para que dependas de su versión de la realidad.", "prompt": "cracked mirror reflecting distorted face in dark"},
+            {"texto": "Aprende a blindar tu mente contra manipuladores en el enlace de la descripción.", "prompt": "heavy iron padlock on old book dark mood"}
+        ]
+    },
+    "7. Efecto Zeigarnik": {
+        "cabecera": "OBSESIÓN PSICOLÓGICA",
+        "titulo_yt": "El Truco Psicológico para que Alguien No Pueda Olvidarte #Shorts #Psicologia",
+        "escenas": [
+            {"texto": "Si quieres que alguien no deje de pensar en ti, aplica el Efecto Zeigarnik.", "prompt": "person looking at phone screen in dark bedroom night"},
+            {"texto": "Nuestra mente borra lo que ya ha terminado, pero se queda atrapada en lo que queda a medias.", "prompt": "jigsaw puzzle missing final piece dark table"},
+            {"texto": "Termina la conversación en su punto más alto y su cerebro te recordará todo el día.", "prompt": "silhouette walking into dark mist streetlight"},
+            {"texto": "Descubre más leyes del comportamiento humano en los libros de la descripción.", "prompt": "hourglass with golden sand in dark room"}
+        ]
+    },
+    "8. Los pies no mienten": {
+        "cabecera": "LENGUAJE CORPORAL OCULTO",
+        "titulo_yt": "Lo que Sus Pies Revelan de Sus Intenciones Ocultas #Shorts #LenguajeCorporal",
+        "escenas": [
+            {"texto": "El rostro humano está entrenado para fingir, pero los pies siempre dicen la verdad.", "prompt": "leather shoes on dark wet street reflection"},
+            {"texto": "Si hablas con alguien y sus pies apuntan hacia la puerta, quiere irse aunque te sonría.", "prompt": "two people standing in hallway focus on shoes shadow"},
+            {"texto": "Si cruza los tobillos debajo de la silla en una negociación, está ocultando información.", "prompt": "person sitting on chair in dark office ankles crossed"},
+            {"texto": "Domina los seis libros del lenguaje corporal en el enlace de la descripción.", "prompt": "magnifying glass over old book pages dark"}
+        ]
+    },
+    "9. Paradoja de la Elección": {
+        "cabecera": "POR QUÉ DUDAS TANTO",
+        "titulo_yt": "La Regla de 3 para Tomar Decisiones sin Estrés #Shorts #DesarrolloPersonal",
+        "escenas": [
+            {"texto": "Tener demasiadas opciones no te hace más libre, te hace más infeliz.", "prompt": "person standing in front of many doors dark corridor"},
+            {"texto": "Se llama Paradoja de la Elección: a partir de cinco alternativas, tu cerebro entra en fatiga.", "prompt": "overwhelmed man in dark room surrounded by screens"},
+            {"texto": "Para decidir como un estratega, descarta todo rápido y quédate solo con tres caminos.", "prompt": "three glowing paths in dark forest night"},
+            {"texto": "Entrena tu enfoque mental con los audiolibros recomendados en la descripción.", "prompt": "compass on dark map candlelight"}
+        ]
+    },
+    "10. Técnica del Espejo": {
+        "cabecera": "EL HACK DE LA EMPATÍA",
+        "titulo_yt": "Cómo Caerle Bien a Cualquier Persona en 10 Segundos #Shorts #Persuasion",
+        "escenas": [
+            {"texto": "¿Quieres ganarte la confianza de un desconocido en menos de un minuto?", "prompt": "two businessmen shaking hands in dark luxury lounge"},
+            {"texto": "Imita con dos segundos de retraso su postura, la velocidad al hablar y sus gestos.", "prompt": "reflection in dark water surface moody"},
+            {"texto": "Sus neuronas espejo se activarán y sentirá una conexión inexplicable contigo.", "prompt": "glowing neural network connection dark background"},
+            {"texto": "Tienes la guía maestra de persuasión en los enlaces de la descripción.", "prompt": "silver key on dark velvet cushion"}
+        ]
+    },
+    "11. El Efecto Franklin": {
+        "cabecera": "CONVIERTE ENEMIGOS EN ALIADOS",
+        "titulo_yt": "El Efecto Ben Franklin: Cómo Hacer que un Enemigo te Aprecie #Shorts #Psicologia",
+        "escenas": [
+            {"texto": "Si alguien te tiene manía sin motivo, no intentes hacerle un favor. Pídeselo tú a él.", "prompt": "two rivals facing each other dark chess game"},
+            {"texto": "Pídele algo minúsculo, como que te preste un bolígrafo o te dé un consejo rápido.", "prompt": "fountain pen on dark mahogany desk"},
+            {"texto": "Su cerebro resolverá la disonancia cognitiva convenciéndose de que en realidad le caes bien.", "prompt": "scales of balance in dark moody lighting"},
+            {"texto": "Aprende psicología aplicada en los libros y audiolibros de la descripción.", "prompt": "old portrait painting style dark library"}
+        ]
+    },
+    "12. El Anclaje en Negociación": {
+        "cabecera": "PSICOLOGÍA DEL DINERO",
+        "titulo_yt": "El Truco del Anclaje que Usan los Negociadores Expertos #Shorts #Negocios",
+        "escenas": [
+            {"texto": "En cualquier negociación, la primera cifra que se dice en voz alta gana la partida.", "prompt": "boardroom table dark moody skyscraper view"},
+            {"texto": "Se llama Sesgo de Anclaje: el cerebro usa el primer número como referencia absoluta.", "prompt": "heavy ship anchor underwater dark blue abyss"},
+            {"texto": "Si pides primero algo elevado, la contraoferta siempre será mucho más alta de normal.", "prompt": "stack of gold coins in dark shadow"},
+            {"texto": "Domina el arte de negociar con los libros recomendados en la descripción.", "prompt": "briefcase on dark leather chair"}
+        ]
+    },
+    "13. El Efecto Pratfall": {
+        "cabecera": "EL PODER DE LA IMPERFECCIÓN",
+        "titulo_yt": "Por Qué Ser Demasiado Perfecto Hace que la Gente Desconfíe #Shorts #Psicologia",
+        "escenas": [
+            {"texto": "Intentar parecer perfecto todo el tiempo genera rechazo y envidia en los demás.", "prompt": "cold marble statue in dark museum"},
+            {"texto": "Según la psicología, cometer un pequeño error torpe en público dispara tu carisma.", "prompt": "coffee cup spilling on dark table slow motion"},
+            {"texto": "Se llama Efecto Pratfall: muestras humanidad y haces que los demás se sientan cómodos.", "prompt": "charismatic man smiling in dim moody bar"},
+            {"texto": "Mejora tu inteligencia social con los libros del enlace en la descripción.", "prompt": "cracked kintsugi bowl with gold veins dark"}
+        ]
+    },
+    "14. Bombardeo de Amor": {
+        "cabecera": "LA TRAMPA NARCISISTA",
+        "titulo_yt": "Qué es el Love Bombing y Cómo Detectarlo a Tiempo #Shorts #Relaciones",
+        "escenas": [
+            {"texto": "Desconfía de quien te promete amor eterno y te llena de regalos en la primera semana.", "prompt": "red rose burning in dark room cinematic"},
+            {"texto": "Los perfiles narcisistas usan el bombardeo de afecto para crear adicción a su validación.", "prompt": "golden cage in dark room dramatic light"},
+            {"texto": "En cuanto estés enganchado, retirarán todo el cariño de golpe para tener el control.", "prompt": "wilted flower on cold stone floor dark"},
+            {"texto": "Protege tu paz mental con las guías de psicología de la descripción.", "prompt": "glowing shield emblem in dark mist"}
+        ]
+    },
+    "15. La Regla de los 3 Segundos": {
+        "cabecera": "DOMINA EL CARISMA",
+        "titulo_yt": "La Pausa de 3 Segundos que usan los Líderes Más Carismáticos #Shorts #Liderazgo",
+        "escenas": [
+            {"texto": "Las personas más respetadas nunca responden al instante cuando les hacen una pregunta.", "prompt": "leader standing on dark stage spotlight"},
+            {"texto": "Hacen una pausa de dos a tres segundos mirando al interlocutor antes de hablar.", "prompt": "watch hands moving closeup dark background"},
+            {"texto": "Ese breve silencio demuestra calma absoluta y hace que cada palabra parezca oro.", "prompt": "microphone in dark studio moody lighting"},
+            {"texto": "Desarrolla una mentalidad inquebrantable con los audiolibros de la descripción.", "prompt": "mountain peak in dark stormy clouds"}
+        ]
+    },
+    "16. Psicología del Color Rojo": {
+        "cabecera": "PSICOLOGÍA DEL COLOR",
+        "titulo_yt": "Cómo los Colores que Vistes Manipulan a Quienes te Rodean #Shorts #Curiosidades",
+        "escenas": [
+            {"texto": "El color que llevas puesto altera el pulso cardíaco de las personas que te miran.", "prompt": "person in red coat walking in dark black and white street"},
+            {"texto": "El azul marino proyecta autoridad y lealtad; por eso se usa en juicios y bancos.", "prompt": "dark navy blue suit closeup luxury texture"},
+            {"texto": "El negro impone distancia y poder, mientras que el rojo activa la urgencia y atracción.", "prompt": "red neon light reflecting on dark sunglasses"},
+            {"texto": "Descubre el libro oficial de la psicología del color en la descripción.", "prompt": "prism splitting light in dark room"}
+        ]
+    },
+    "17. El Efecto Pigmalión": {
+        "cabecera": "LA PROFECÍA AUTOCUMPLIDA",
+        "titulo_yt": "Cómo las Expectativas de los Demás Cambian tu Rendimiento #Shorts #Motivacion",
+        "escenas": [
+            {"texto": "Trata a un hombre como lo que es y seguirá igual; trátalo como puede llegar a ser y se transformará.", "prompt": "sculptor carving marble statue in dark studio"},
+            {"texto": "El Efecto Pigmalión demuestra que rendimos según lo que creemos que esperan de nosotros.", "prompt": "runner in dark stadium starting block spotlight"},
+            {"texto": "Aléjate de quienes dudan de tu capacidad, porque tu subconsciente absorberá sus límites.", "prompt": "chains breaking in dark dramatic lighting"},
+            {"texto": "Potencia tu motivación al máximo con los libros de la descripción.", "prompt": "torch fire burning in dark cave"}
+        ]
+    },
+    "18. La Técnica del Disco Rayado": {
+        "cabecera": "CÓMO DECIR QUE NO",
+        "titulo_yt": "La Técnica Psicológica para Decir 'No' sin Sentirte Culpable #Shorts #Psicologia",
+        "escenas": [
+            {"texto": "Cuando dices que no, el error más grave que puedes cometer es dar excusas largas.", "prompt": "hand raised stop gesture in dark shadow"},
+            {"texto": "Un manipulador usará tus propias excusas como puntos débiles para seguir insistiendo.", "prompt": "chess pieces surrounding a lone king dark"},
+            {"texto": "Repite la misma frase corta y tranquila una y otra vez. Se quedarán sin munición.", "prompt": "vinyl record spinning in dark room neon"},
+            {"texto": "Aprende asertividad y defensa verbal en los enlaces de la descripción.", "prompt": "fortress wall in dark night fog"}
+        ]
+    },
+    "19. El Efecto Dunning-Kruger": {
+        "cabecera": "LA PARADOJA DE LA IGNORANCIA",
+        "titulo_yt": "Por Qué los Más Ignorantes son los Más Ruidosos #Shorts #Psicologia",
+        "escenas": [
+            {"texto": "Cuanto menos sabe una persona sobre un tema, más segura está de tener toda la razón.", "prompt": "man shouting in dark room megaphone shadow"},
+            {"texto": "Se conoce como efecto Dunning-Kruger: la ignorancia da una confianza ciega.", "prompt": "blindfolded statue in dark dramatic light"},
+            {"texto": "Por el contrario, las mentes más brillantes suelen dudar porque conocen la complejidad real.", "prompt": "old philosopher reading in dark library"},
+            {"texto": "Alimenta tu mente cada día con los audiolibros gratis de la descripción.", "prompt": "glowing tree of knowledge dark background"}
+        ]
+    },
+    "20. Microexpresión de Desprecio": {
+        "cabecera": "LA SEÑAL MÁS PELIGROSA",
+        "titulo_yt": "El Gesto de 1 Segundo que Delata a un Falso Amigo #Shorts #LenguajeCorporal",
+        "escenas": [
+            {"texto": "Existe un gesto facial que dura menos de medio segundo y predice la traición.", "prompt": "half face in shadow dramatic portrait dark"},
+            {"texto": "Si al contar un logro tuyo, alguien levanta solo una comisura de los labios...", "prompt": "subtle smirk closeup in dark lighting"},
+            {"texto": "Es la microexpresión universal del desprecio y la envidia. Nunca falla.", "prompt": "snake hidden in dark grass moody"},
+            {"texto": "Aprende a leer cada gesto humano con el pack de libros de la descripción.", "prompt": "human face wireframe scan dark screen"}
+        ]
+    },
+    "21. Ley de Parkinson": {
+        "cabecera": "HACKEA TU PRODUCTIVIDAD",
+        "titulo_yt": "Por Qué Postergas Todo hasta el Último Minuto (Ley de Parkinson) #Shorts",
+        "escenas": [
+            {"texto": "Si te das una semana para hacer un trabajo de dos horas, tardarás exactamente una semana.", "prompt": "clock melting in dark room surreal"},
+            {"texto": "La Ley de Parkinson dicta que el trabajo se expande hasta ocupar todo el tiempo disponible.", "prompt": "man working late at night dark desk laptop glow"},
+            {"texto": "Ponte plazos artificialmente cortos y verás cómo tu enfoque se multiplica por diez.", "prompt": "stopwatch ticking closeup dark background"},
+            {"texto": "Domina tu disciplina y motivación con los libros de la descripción.", "prompt": "metronome in dark room dramatic light"}
+        ]
+    },
+    "22. La Mirada al Mentón": {
+        "cabecera": "PSICOLOGÍA DEL LIDERAZGO",
+        "titulo_yt": "Qué Pasa Cuando Subes el Mentón 2 Centímetros al Hablar #Shorts #Carisma",
+        "escenas": [
+            {"texto": "En situaciones de tensión, tu cuello revela instantáneamente tu rango en el grupo.", "prompt": "man in dark suit looking up confident shadow"},
+            {"texto": "Cuando tenemos miedo, bajamos la barbilla por instinto para proteger la garganta.", "prompt": "boxer in dark ring guard up dramatic"},
+            {"texto": "Mantener el mentón ligeramente elevado envía una señal biológica de calma y liderazgo.", "prompt": "lion in the dark looking at camera intense"},
+            {"texto": "Descubre los secretos del lenguaje no verbal en la descripción del vídeo.", "prompt": "golden crown on dark stone"}
+        ]
+    },
+    "23. El Sesgo del Costo Hundido": {
+        "cabecera": "LA TRAMPA DE NO SOLTAR",
+        "titulo_yt": "El Error Psicológico que te Mantiene en Malas Decisiones #Shorts #Psicologia",
+        "escenas": [
+            {"texto": "¿Por qué nos cuesta tanto abandonar un mal negocio o una relación que ya no funciona?", "prompt": "sinking ship in dark stormy ocean painting"},
+            {"texto": "Tu cerebro odia admitir que el tiempo y esfuerzo que ya invertiste se han perdido.", "prompt": "burning money in dark ashtray moody"},
+            {"texto": "Los grandes estrategas no miran lo que ya costó, solo evalúan lo que les costará seguir ahí.", "prompt": "scissors cutting a red thread in the dark"},
+            {"texto": "Aprende a pensar con claridad con los libros recomendados en la descripción.", "prompt": "lighthouse beam in dark night sea"}
+        ]
+    },
+    "24. El Secreto de los Cuentos": {
+        "cabecera": "EL PODER DE LAS HISTORIAS",
+        "titulo_yt": "Por Qué una Buena Historia Convence Más que Mil Datos #Shorts #Persuasion",
+        "escenas": [
+            {"texto": "Cuando das datos fríos, el cerebro de quien te escucha activa sus barreras críticas.", "prompt": "cold computer data screen in dark room"},
+            {"texto": "Pero cuando cuentas una historia, su mente baja la guardia y libera oxitocina.", "prompt": "campfire in dark forest sparks flying"},
+            {"texto": "Quien domina el arte de contar historias, domina las emociones de los demás.", "prompt": "open magical book with glowing particles dark"},
+            {"texto": "Explora la psicología a través de las historias en el enlace de la descripción.", "prompt": "lantern glowing on dark wooden path"}
+        ]
+    }
 }
 
 # ==============================================================================
@@ -69,7 +297,7 @@ def guardar_historial(tema):
         f.write(f"{tema}\n")
 
 # ==============================================================================
-# GENERADOR PROCEDURAL Y DESCARGA IA (Igual que tu versión anterior)
+# GENERADOR PROCEDURAL Y DESCARGA IA
 # ==============================================================================
 def generar_fondo_procedural_oscuro(ruta_img: str, seed: int):
     rng = np.random.default_rng(seed)
@@ -117,7 +345,7 @@ def descargar_fondo_ia(prompt: str, ruta_img: str, seed: int):
     generar_fondo_procedural_oscuro(ruta_img, seed)
 
 # ==============================================================================
-# AUDIO, SUBTÍTULOS Y PRODUCCIÓN VÍDEO (API 2.x restaurada)
+# AUDIO, SUBTÍTULOS Y PRODUCCIÓN VÍDEO (API 1.0.3)
 # ==============================================================================
 def crear_musica_fondo(filepath: str, duracion: float, sr: int = 44100):
     t = np.linspace(0, duracion, int(sr * duracion), False)
@@ -144,7 +372,6 @@ def quemar_textos(ruta_in, cabecera, texto, num_escena, total_escenas, ruta_out)
     dr_capa.rectangle([(0, 1100), (1080, 1720)], fill=(0, 0, 0, 140))
     img = Image.alpha_composite(img, capa).convert("RGB")
     draw = ImageDraw.Draw(img)
-    # Ajusta la ruta de la fuente según tu entorno si falla, esto funciona en Ubuntu/GitHub
     try:
         f_cab = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 44)
         f_sub = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 68)
@@ -193,25 +420,26 @@ def producir_video(clave, datos):
         descargar_fondo_ia(esc["prompt"], r_raw, random.randint(100, 99999))
         quemar_textos(r_raw, datos["cabecera"], esc["texto"], i, len(datos["escenas"]), r_sub)
 
-        # Sintaxis original de MoviePy 2.x restaurada
-        base = ImageClip(r_sub).with_duration(dur)
-        zoom = base.resized(lambda t: 1.0 + 0.032 * t).with_position(("center", "center"))
-        escena = CompositeVideoClip([zoom], size=(1080, 1920)).with_duration(dur).with_audio(audio)
+        # Sintaxis estricta MoviePy 1.0.3
+        base = ImageClip(r_sub).set_duration(dur)
+        zoom = base.resize(lambda t: 1.0 + 0.032 * t).set_position(("center", "center"))
+        escena = CompositeVideoClip([zoom], size=(1080, 1920)).set_duration(dur).set_audio(audio)
         clips.append(escena)
 
     final = concatenate_videoclips(clips, method="compose")
     r_bgm = os.path.join(carpeta, "bgm.wav")
     crear_musica_fondo(r_bgm, final.duration)
     
-    # Sintaxis original de MoviePy 2.x restaurada
-    bgm = AudioFileClip(r_bgm).with_volume_scaled(0.18).with_duration(final.duration)
+    # Sintaxis estricta MoviePy 1.0.3
+    bgm = AudioFileClip(r_bgm).volumex(0.18).set_duration(final.duration)
 
     mezcla = CompositeAudioClip([final.audio, bgm])
     mp4_out = os.path.join(carpeta, "VIDEO_FINAL.mp4")
     
-    final.with_audio(mezcla).write_videofile(
+    # Parámetros FFmpeg mejorados para evitar rechazos en Instagram/Telegram
+    final.set_audio(mezcla).write_videofile(
         mp4_out, fps=24, codec="libx264", audio_codec="aac",
-        preset="ultrafast", logger=None
+        preset="veryfast", ffmpeg_params=["-pix_fmt", "yuv420p", "-crf", "23"], logger=None
     )
     return mp4_out
 
@@ -276,7 +504,7 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
         return False
 
 # ==============================================================================
-# ENVÍO A INSTAGRAM (CON INYECCIÓN DE SESIÓN)
+# ENVÍO A INSTAGRAM (CON INYECCIÓN DE SESIÓN E IMPORT PEREZOSO)
 # ==============================================================================
 def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
     INSTA_USER = os.getenv("INSTA_USER")
@@ -297,8 +525,11 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
 
     print("📱 Conectando a Instagram mediante sesión inyectada...")
     try:
+        # Import perezoso para que si hay conflicto, no reviente todo el bot
+        from instagrapi import Client
+        
         cl = Client()
-        cl.delay_range = [2, 6] # Simula tiempos de espera humanos
+        cl.delay_range = [2, 6] 
         cl.set_settings(json.loads(INSTA_SESSION))
         cl.login(INSTA_USER, INSTA_PASS)
         
@@ -343,8 +574,6 @@ if __name__ == "__main__":
     exito_ig = publicar_instagram_reel(ruta_mp4, datos["titulo_yt"], libro_al_azar)
     
     # Solo guarda en el historial si AL MENOS una plataforma lo recibió bien. 
-    # Así, si Instagram falla por algo, la próxima vez generará otro distinto, 
-    # o si fallan ambas, reintentará este mismo mañana.
     if exito_telegram or exito_ig:
         guardar_historial(clave_elegida)
         print("🎉 Proceso completado con éxito.")
