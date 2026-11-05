@@ -9,7 +9,7 @@ import requests
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import edge_tts
-from moviepy import (
+from moviepy.editor import (
     ImageClip, AudioFileClip, CompositeAudioClip,
     CompositeVideoClip, concatenate_videoclips,
 )
