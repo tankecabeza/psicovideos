@@ -13,6 +13,7 @@ from moviepy import (
     ImageClip, AudioFileClip, CompositeAudioClip,
     CompositeVideoClip, concatenate_videoclips,
 )
+from instagrapi import Client
 
 if not hasattr(Image, "ANTIALIAS"):
     Image.ANTIALIAS = Image.LANCZOS
@@ -543,52 +544,43 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
         return False
 
 # ==============================================================================
-# ENVÍO A MAKE.COM (AUTOPUBLICACIÓN CERO CLICS)
+# ENVÍO A INSTAGRAM REELS (AUTOPUBLICACIÓN DIRECTA)
 # ==============================================================================
-def enviar_a_make(video_path, titulo_yt, libro_elegido):
-    MAKE_WEBHOOK = os.getenv("MAKE_WEBHOOK_URL")
-    if not MAKE_WEBHOOK:
-        print("⚠️ No hay MAKE_WEBHOOK_URL en los Secrets. Omitiendo autopublicación.")
+def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
+    INSTA_USER = os.getenv("INSTA_USER")
+    INSTA_PASS = os.getenv("INSTA_PASS")
+    
+    if not INSTA_USER or not INSTA_PASS:
+        print("⚠️ Faltan credenciales de Instagram en los Secrets. Omitiendo subida.")
         return False
 
-    print("☁️ Subiendo vídeo a servidor temporal alternativo para Make.com...")
-    try:
-        with open(video_path, 'rb') as f:
-            r_up = requests.post("https://0x0.st", files={"file": f}, timeout=120)
-        
-        video_url = r_up.text.strip()
-        if r_up.status_code != 200 or not video_url.startswith("http"):
-            print(f"❌ Error en el servidor temporal: {r_up.text}")
-            return False
-            
-        print(f"✅ Vídeo subido temporalmente a: {video_url}")
-    except Exception as e:
-        print(f"❌ Error subiendo vídeo a la nube temporal: {e}")
-        return False
-
-    titulo_yt_limpio = titulo_yt[:100].strip()
-    descripcion_yt = (
-        f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-        f"🎧 Prueba Audible 30 días GRATIS (Audiolibros ilimitados): {LINK_AUDIBLE}\n\n"
-        f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
-        f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
+    titulo_limpio = titulo_yt[:100].strip()
+    descripcion_ig = (
+        f"{titulo_limpio}\n\n"
+        f"🎧 Prueba Audible 30 días GRATIS (link en mi bio)\n"
+        f"📚 Libro de hoy: {libro_elegido['titulo']}\n\n"
         f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion"
     )
-    descripcion_tiktok = f"{titulo_yt_limpio} 🧠 Audiolibro GRATIS en el link de mi perfil🔗 #psicologia #psicologiaoscura #manipulacion"
 
-    print("🚀 Disparando orden a Make.com...")
-    payload = {
-        "video_url": video_url,
-        "titulo": titulo_yt_limpio,
-        "desc_youtube": descripcion_yt,
-        "desc_tiktok": descripcion_tiktok
-    }
-    r = requests.post(MAKE_WEBHOOK, json=payload, timeout=30)
-    if r.status_code == 200:
-        print("✅ ¡Orden recibida por Make.com!")
+    print("📱 Conectando a Instagram...")
+    try:
+        cl = Client()
+        cl.login(INSTA_USER, INSTA_PASS)
+        
+        print("🚀 Subiendo Reel a Instagram...")
+        cl.clip_upload(
+            video_path,
+            descripcion_ig,
+            extra_data={
+                "custom_accessibility_caption": "Vídeo animado sobre psicología y comportamiento humano.",
+                "like_and_view_counts_disabled": 0,
+                "disable_comments": 0,
+            }
+        )
+        print("✅ ¡Reel publicado con éxito en Instagram!")
         return True
-    else:
-        print(f"❌ Error conectando con Make: {r.status_code} - {r.text}")
+    except Exception as e:
+        print(f"❌ Error subiendo a Instagram: {e}")
         return False
 
 # ==============================================================================
@@ -609,11 +601,11 @@ if __name__ == "__main__":
 
     ruta_mp4 = producir_video(clave_elegida, datos)
     
-    # 1. Avisa por Telegram
-    enviar_pack_telegram(ruta_mp4, datos["titulo_yt"], libro_al_azar)
+    # 1. Publica automáticamente en Instagram Reels
+    publicar_instagram_reel(ruta_mp4, datos["titulo_yt"], libro_al_azar)
     
-    # 2. Envía a Make para la publicación automática
-    enviar_a_make(ruta_mp4, datos["titulo_yt"], libro_al_azar)
+    # 2. Te envía el paquete a Telegram para subidas manuales (TikTok/YouTube)
+    enviar_pack_telegram(ruta_mp4, datos["titulo_yt"], libro_al_azar)
     
     guardar_historial(clave_elegida)
     print("🎉 Proceso completado con éxito.")
