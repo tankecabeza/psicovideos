@@ -29,15 +29,15 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu wget git
+          sudo apt-get install -y ffmpeg fonts-dejavu curl git
 
       - name: Preparar Motor de IA (Wav2Lip)
         run: |
           git clone https://github.com/Rudrabha/Wav2Lip.git
           mkdir -p Wav2Lip/checkpoints
-          # Descargamos los modelos de IA de reconocimiento facial y movimiento de labios (modo silencioso)
-          wget -q "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/wav2lip_gan.pth" -O Wav2Lip/checkpoints/wav2lip_gan.pth
-          wget -q "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/s3fd.pth" -O Wav2Lip/face_detection/detection/sfd/s3fd.pth
+          # Usamos curl -sL (silencioso y sigue redirecciones) en lugar de wget para evitar bloqueos
+          curl -sL "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/wav2lip_gan.pth" -o Wav2Lip/checkpoints/wav2lip_gan.pth
+          curl -sL "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/s3fd.pth" -o Wav2Lip/face_detection/detection/sfd/s3fd.pth
 
       - name: Install Python dependencies
         run: |
