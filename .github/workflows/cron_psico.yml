@@ -35,9 +35,9 @@ jobs:
         run: |
           git clone https://github.com/Rudrabha/Wav2Lip.git
           mkdir -p Wav2Lip/checkpoints
-          # Usamos curl -sL para descargar los modelos silenciosamente
-          curl -sL "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/wav2lip_gan.pth" -o Wav2Lip/checkpoints/wav2lip_gan.pth
-          curl -sL "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/s3fd.pth" -o Wav2Lip/face_detection/detection/sfd/s3fd.pth
+          # Descarga simulando ser un navegador Chrome para evitar el bloqueo de Hugging Face
+          curl -sL -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/wav2lip_gan.pth" -o Wav2Lip/checkpoints/wav2lip_gan.pth
+          curl -sL -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/s3fd.pth" -o Wav2Lip/face_detection/detection/sfd/s3fd.pth
 
       - name: Install Python dependencies
         run: |
