@@ -35,14 +35,15 @@ jobs:
         run: |
           git clone https://github.com/Rudrabha/Wav2Lip.git
           mkdir -p Wav2Lip/checkpoints
-          # Usamos curl -sL (silencioso y sigue redirecciones) en lugar de wget para evitar bloqueos
+          # Usamos curl -sL para descargar los modelos silenciosamente
           curl -sL "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/wav2lip_gan.pth" -o Wav2Lip/checkpoints/wav2lip_gan.pth
           curl -sL "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/s3fd.pth" -o Wav2Lip/face_detection/detection/sfd/s3fd.pth
 
       - name: Install Python dependencies
         run: |
           pip install -r requirements.txt
-          pip install librosa==0.9.2 torch torchvision torchaudio opencv-python numpy==1.23.5 moviepy edge-tts
+          # Fijamos PyTorch a la versión 2.5.1 para evitar bloqueos de seguridad con Wav2Lip
+          pip install librosa==0.9.2 torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 opencv-python numpy==1.23.5 moviepy edge-tts
 
       - name: Fabricar y enviar el vídeo
         env:
