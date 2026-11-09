@@ -1,16 +1,8 @@
 requests
 numpy==1.23.5
-Pillow==9.5.0
+Pillow
 edge-tts
 moviepy==1.0.3
-imageio==2.31.6
-imageio-ffmpeg
-proglog
-decorator<5
-librosa==0.9.2
-numba==0.57.1
-opencv-python==4.8.1.78
-scipy==1.10.1
 instagrapi
 google-api-python-client
 google-auth-httplib2
