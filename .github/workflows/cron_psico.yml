@@ -1,49 +1,91 @@
+
 name: Bot Automatico PsicoVideos Avatar
 
 on:
   schedule:
-    # Publica automáticamente 4 veces al día (horas UTC)
     - cron: '0 10 * * *'
     - cron: '0 14 * * *'
     - cron: '0 19 * * *'
     - cron: '0 23 * * *'
   workflow_dispatch:
 
-# Permiso obligatorio para que GitHub no dé error 403 al guardar el historial
 permissions:
   contents: write
+
+concurrency:
+  group: publicar-psicovideos
+  cancel-in-progress: false
 
 jobs:
   publicar-video:
     runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Python
+      - name: Preparar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
           cache: 'pip'
 
-      - name: Install system dependencies
+      - name: Instalar dependencias del sistema
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-dejavu curl git
 
-      - name: Preparar Motor de IA (Wav2Lip)
+      - name: Descargar motor Wav2Lip
         run: |
-          git clone https://github.com/Rudrabha/Wav2Lip.git
-          mkdir -p Wav2Lip/checkpoints
-          # Usamos enlaces directos estables que no bloquean las descargas automatizadas
-          curl -sL "https://github.com/justinjohn0306/Wav2Lip/releases/download/models/wav2lip_gan.pth" -o Wav2Lip/checkpoints/wav2lip_gan.pth
-          curl -sL "https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth" -o Wav2Lip/face_detection/detection/sfd/s3fd.pth
+          set -e
 
-      - name: Install Python dependencies
+          if [ ! -d "Wav2Lip" ]; then
+            git clone https://github.com/Rudrabha/Wav2Lip.git
+          fi
+
+          mkdir -p Wav2Lip/checkpoints
+          mkdir -p Wav2Lip/face_detection/detection/sfd
+
+          echo "Descargando modelo Wav2Lip GAN..."
+
+          curl -fL --retry 3 \
+            "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/wav2lip_gan.pth" \
+            -o Wav2Lip/checkpoints/wav2lip_gan.pth
+
+          echo "Descargando detector facial S3FD..."
+
+          curl -fL --retry 3 \
+            "https://huggingface.co/camenduru/Wav2Lip/resolve/425b26c2c4ecc3e326d0bbf0d06978747dd0c1a3/face_detection/detection/sfd/s3fd.pth" \
+            -o Wav2Lip/face_detection/detection/sfd/s3fd.pth
+
+          test -s Wav2Lip/checkpoints/wav2lip_gan.pth
+          test -s Wav2Lip/face_detection/detection/sfd/s3fd.pth
+
+          echo "Los dos modelos se han descargado correctamente."
+
+      - name: Instalar PyTorch CPU
+        run: |
+          python -m pip install --upgrade pip
+
+          pip install --index-url https://download.pytorch.org/whl/cpu \
+            torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
+
+      - name: Instalar dependencias Python
         run: |
           pip install -r requirements.txt
-          # Fijamos PyTorch a la versión 2.5.1 para evitar bloqueos de seguridad con Wav2Lip
-          pip install librosa==0.9.2 torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 opencv-python numpy==1.23.5 moviepy edge-tts
+
+      - name: Comprobar archivos necesarios
+        run: |
+          test -f auto_psico_video.py
+          test -f avatar.jpg
+          test -f historial_videos.txt
+
+          ffmpeg -version
+
+          python -c "import torch, cv2, moviepy, librosa; print('Dependencias OK')"
 
       - name: Fabricar y enviar el vídeo
         env:
@@ -55,13 +97,23 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
-        run: python -u auto_psico_video.py
 
-      - name: Commit and push historial
+        run: |
+          python -u auto_psico_video.py
+
+      - name: Guardar historial de vídeos
+        if: always()
         run: |
           git config user.name "Psico-Bot"
           git config user.email "bot@users.noreply.github.com"
-          git add historial_videos.txt || true
-          git commit -m "Vídeo de avatar publicado añadido al historial" || echo "Sin cambios en el historial."
-          git pull --rebase origin main || true
-          git push origin HEAD:main
+
+          git pull --rebase origin main
+
+          git add historial_videos.txt
+
+          if git diff --cached --quiet; then
+            echo "No hay cambios en el historial."
+          else
+            git commit -m "Actualizar historial de PsicoVideos"
+            git push origin HEAD:main
+          fi
