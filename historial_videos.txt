@@ -13,3 +13,4 @@
 7. Efecto Zeigarnik
 43. Condicionamiento Clásico
 4. Triangulación Visual
+33. Técnica BYAF
