@@ -10,3 +10,4 @@
 1. Trucos contra manipuladores
 15. La Regla de los 3 Segundos
 10. Técnica del Espejo
+7. Efecto Zeigarnik
