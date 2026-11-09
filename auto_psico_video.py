@@ -12,6 +12,19 @@ from PIL import Image, ImageDraw, ImageFont
 import edge_tts
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip
 
+# --- PARCHE PARA PYTORCH 2.6+ ---
+# Esto desactiva la nueva restricción de seguridad que bloquea la carga de Wav2Lip
+import torch
+if hasattr(torch.serialization, 'add_safe_globals'):
+    torch.serialization.add_safe_globals([getattr(torch, 'FloatStorage', None)])
+if hasattr(torch, 'load'):
+    original_load = torch.load
+    def patched_load(*args, **kwargs):
+        kwargs['weights_only'] = False
+        return original_load(*args, **kwargs)
+    torch.load = patched_load
+# --------------------------------
+
 # Imports para YouTube API y redes
 from instagrapi import Client
 from google.oauth2.credentials import Credentials
@@ -565,6 +578,10 @@ async def generar_audio_y_tiempos(escenas, ruta_out):
     os.makedirs(carpeta, exist_ok=True)
     
     voz = "es-ES-ElviraNeural"
+    
+    # Arreglamos la ruta del silencio para que FFMPEG la encuentre siempre
+    ruta_silencio = os.path.join(carpeta, "silence.wav")
+    os.system(f"ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.2 -q:a 9 -acodec pcm_s16le {ruta_silencio} -y -hide_banner -loglevel error")
 
     with open("temp_list.txt", "w") as f_list:
         for i, esc in enumerate(escenas):
@@ -582,10 +599,9 @@ async def generar_audio_y_tiempos(escenas, ruta_out):
             audio_clip.write_audiofile(ruta_wav, logger=None)
             f_list.write(f"file '{ruta_wav}'\n")
             f_list.write(f"duration {dur}\n")
-            f_list.write(f"file 'silence.wav'\n")
+            f_list.write(f"file '{ruta_silencio}'\n")
             f_list.write(f"duration 0.2\n")
     
-    os.system("ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.2 -q:a 9 -acodec pcm_s16le render_tmp/silence.wav -y -hide_banner -loglevel error")
     os.system(f"ffmpeg -f concat -safe 0 -i temp_list.txt -c copy {ruta_out} -y -hide_banner -loglevel error")
     
     return tiempos_textos
@@ -654,6 +670,10 @@ def producir_video_avatar(clave, datos):
         "--nosmooth"
     )
     os.system(comando_ia)
+
+    # Verificamos que la IA haya generado el video correctamente
+    if not os.path.exists(ruta_avatar_ia):
+        raise FileNotFoundError(f"El modelo de IA falló y no generó {ruta_avatar_ia}")
 
     print("✍️ Quemando subtítulos sincronizados...")
     video_ia = VideoFileClip(ruta_avatar_ia)
