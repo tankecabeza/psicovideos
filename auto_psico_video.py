@@ -1,45 +1,41 @@
 import os
 import sys
-import json
-import math
+import time
 import wave
-import html
 import random
 import asyncio
-import subprocess
-
-import numpy as np
+import urllib.parse
 import requests
-import edge_tts
+import json
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+import edge_tts
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip
 
-# Compatibilidad de moviepy 1.0.3 con Pillow >= 10
-if not hasattr(Image, "ANTIALIAS"):
-    Image.ANTIALIAS = Image.LANCZOS
+# --- PARCHE PARA PYTORCH 2.6+ ---
+import torch
+if hasattr(torch.serialization, 'add_safe_globals'):
+    torch.serialization.add_safe_globals([getattr(torch, 'FloatStorage', None)])
+if hasattr(torch, 'load'):
+    original_load = torch.load
+    def patched_load(*args, **kwargs):
+        kwargs['weights_only'] = False
+        return original_load(*args, **kwargs)
+    torch.load = patched_load
+# --------------------------------
 
-from moviepy.editor import VideoFileClip
-
-# Imports para YouTube API y redes
 from instagrapi import Client
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
-# ==============================================================================
-# CONFIGURACIÓN
-# ==============================================================================
+if not hasattr(Image, "ANTIALIAS"):
+    Image.ANTIALIAS = Image.LANCZOS
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-# Modo prueba: solo envía a Telegram, no publica en IG/YouTube ni guarda historial
-SOLO_TELEGRAM = os.getenv("SOLO_TELEGRAM", "0") == "1"
-
 ARCHIVO_HISTORIAL = "historial_videos.txt"
-CARPETA = "render_tmp"
 LINK_AUDIBLE = "https://link.amazon/A091gjPQC"
-
-ANCHO, ALTO = 1080, 1920
-FPS = 25  # Wav2Lip genera a 25 fps
 
 LIBROS_AFILIADOS = [
     {"titulo": "La Psicología del Lenguaje Corporal (6 Libros en 1)", "link": "https://link.amazon/B0gBvsEJI"},
@@ -50,25 +46,6 @@ LIBROS_AFILIADOS = [
     {"titulo": "Psicología del Color: Sentimientos y Razón", "link": "https://link.amazon/B0fGUqwUw"},
     {"titulo": "Psico Cuentos: Inteligencia Emocional", "link": "https://link.amazon/B02pmWFFv"}
 ]
-
-HASHTAGS = "#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #desarrollopersonal #shorts"
-
-AVISO_AFILIADOS = (
-    "ℹ️ Este vídeo contiene enlaces de afiliado. Como afiliado de Amazon obtengo ingresos "
-    "por las compras adscritas que cumplan los requisitos. Avatar y voz generados con IA."
-)
-
-
-def construir_descripcion(libro):
-    return (
-        "¿Quieres entender mejor el comportamiento humano?\n\n"
-        f"🎧 Prueba Audible (revisa en el enlace las condiciones de la oferta vigente):\n{LINK_AUDIBLE}\n\n"
-        f"📚 Libro recomendado de hoy: {libro['titulo']}\n"
-        f"👉 Consíguelo aquí: {libro['link']}\n\n"
-        f"{AVISO_AFILIADOS}\n\n"
-        f"{HASHTAGS}"
-    )
-
 
 # ==============================================================================
 # MEGA BASE DE DATOS DE 50 GUIONES COMPLETOS
@@ -81,7 +58,7 @@ PACK_GUIONES = {
             {"texto": "Si alguien te falta al respeto en público, aplica este truco inmediatamente."},
             {"texto": "Uno: mírale a los ojos en silencio durante cuatro segundos. Destruirás su seguridad."},
             {"texto": "Dos: pregúntale con voz calmada si se encuentra bien. Quedará en evidencia frente a todos."},
-            {"texto": "Tienes libros de persuasión y audiolibros recomendados en la descripción."}
+            {"texto": "Tienes los mejores libros de persuasión y audiolibros gratis en la descripción."}
         ]
     },
     "2. Detectar mentiras FBI": {
@@ -90,7 +67,7 @@ PACK_GUIONES = {
         "escenas": [
             {"texto": "Así descubres a un mentiroso en menos de cinco segundos según exagentes del FBI."},
             {"texto": "Si repite exactamente tu pregunta antes de responder, está ganando tiempo para inventar."},
-            {"texto": "Pídele que cuente la historia en orden inverso. Muchos mentirosos se bloquean."},
+            {"texto": "Pídele que cuente la historia en orden inverso. Los mentirosos siempre se bloquean."},
             {"texto": "Descubre los manuales de lectura corporal en los enlaces de la descripción."}
         ]
     },
@@ -118,10 +95,10 @@ PACK_GUIONES = {
         "cabecera": "EL SESGO DE LA BELLEZA",
         "titulo_yt": "Por Qué la Gente Atractiva lo Tiene Más Fácil (Efecto Halo) #Shorts #Curiosidades",
         "escenas": [
-            {"texto": "El efecto Halo es uno de los sesgos inconscientes más estudiados de la mente humana."},
-            {"texto": "En una fracción de segundo, tu cerebro asume que alguien bien vestido es más honesto y capaz."},
-            {"texto": "Hay estudios que sugieren que incluso en los tribunales la apariencia puede influir en las decisiones."},
-            {"texto": "Entiende los sesgos de tu mente con los audiolibros recomendados en la descripción."}
+            {"texto": "El efecto Halo es el sesgo inconsciente más poderoso de la mente humana."},
+            {"texto": "En solo medio segundo, tu cerebro asume que alguien bien vestido es más honesto y capaz."},
+            {"texto": "Incluso en los tribunales, los acusados con buena presencia reciben penas un veinte por ciento menores."},
+            {"texto": "Hackea los sesgos de tu mente con los audiolibros gratis de la descripción."}
         ]
     },
     "6. Gaslighting Sutil": {
@@ -228,7 +205,7 @@ PACK_GUIONES = {
         "cabecera": "PSICOLOGÍA DEL COLOR",
         "titulo_yt": "Cómo los Colores que Vistes Manipulan a Quienes te Rodean #Shorts #Curiosidades",
         "escenas": [
-            {"texto": "El color que llevas puesto influye en la impresión que causas en los demás."},
+            {"texto": "El color que llevas puesto altera el pulso cardíaco de las personas que te miran."},
             {"texto": "El azul marino proyecta autoridad y lealtad; por eso se usa en juicios y bancos."},
             {"texto": "El negro impone distancia y poder, mientras que el rojo activa la urgencia y atracción."},
             {"texto": "Descubre el libro oficial de la psicología del color en la descripción."}
@@ -238,9 +215,9 @@ PACK_GUIONES = {
         "cabecera": "LA PROFECÍA AUTOCUMPLIDA",
         "titulo_yt": "Cómo las Expectativas de los Demás Cambian tu Rendimiento #Shorts #Motivacion",
         "escenas": [
-            {"texto": "El Efecto Pigmalión sugiere que las expectativas de los demás pueden influir en nuestro rendimiento."},
-            {"texto": "Cuando alguien espera mucho de ti, tiendes a esforzarte más; cuando espera poco, tiendes a rendir menos."},
-            {"texto": "Rodéate de quienes creen en tu capacidad, porque sus expectativas influyen en cómo te ves a ti mismo."},
+            {"texto": "Trata a un hombre como lo que es y seguirá igual; trátalo como puede llegar a ser y se transformará."},
+            {"texto": "El Efecto Pigmalión demuestra que rendimos según lo que creemos que esperan de nosotros."},
+            {"texto": "Aléjate de quienes dudan de tu capacidad, porque tu subconsciente absorberá sus límites."},
             {"texto": "Potencia tu motivación al máximo con los libros de la descripción."}
         ]
     },
@@ -261,16 +238,16 @@ PACK_GUIONES = {
             {"texto": "Cuanto menos sabe una persona sobre un tema, más segura está de tener toda la razón."},
             {"texto": "Se conoce como efecto Dunning-Kruger: la ignorancia da una confianza ciega."},
             {"texto": "Por el contrario, las mentes más brillantes suelen dudar porque conocen la complejidad real."},
-            {"texto": "Alimenta tu mente cada día con los audiolibros recomendados en la descripción."}
+            {"texto": "Alimenta tu mente cada día con los audiolibros gratis de la descripción."}
         ]
     },
     "20. Microexpresión de Desprecio": {
         "cabecera": "LA SEÑAL MÁS PELIGROSA",
         "titulo_yt": "El Gesto de 1 Segundo que Delata a un Falso Amigo #Shorts #LenguajeCorporal",
         "escenas": [
-            {"texto": "Existe un gesto facial muy breve que se asocia con el desprecio."},
+            {"texto": "Existe un gesto facial que dura menos de medio segundo y predice la traición."},
             {"texto": "Si al contar un logro tuyo, alguien levanta solo una comisura de los labios..."},
-            {"texto": "Es la microexpresión asociada al desprecio. No es infalible, pero merece tu atención."},
+            {"texto": "Es la microexpresión universal del desprecio y la envidia. Nunca falla."},
             {"texto": "Aprende a leer cada gesto humano con el pack de libros de la descripción."}
         ]
     },
@@ -331,7 +308,7 @@ PACK_GUIONES = {
             {"texto": "Nunca preguntes a alguien si quiere hacer algo, dale dos opciones que te beneficien a ti."},
             {"texto": "En lugar de decir: ¿Nos vemos hoy?, di: ¿Prefieres vernos a las cinco o a las seis?"},
             {"texto": "Su cerebro elegirá la opción más cómoda, olvidando que podía haber dicho que no."},
-            {"texto": "Tienes audiolibros de persuasión avanzada recomendados en la descripción."}
+            {"texto": "Tienes audiolibros de persuasión avanzada gratis en la descripción."}
         ]
     },
     "27. Refuerzo Intermitente": {
@@ -358,7 +335,7 @@ PACK_GUIONES = {
         "cabecera": "HACK DE CONFIANZA",
         "titulo_yt": "El Contacto Físico de 1 Segundo que Multiplica tu Carisma #Shorts #LenguajeCorporal",
         "escenas": [
-            {"texto": "Un roce breve en el antebrazo de la otra persona puede aumentar la sensación de cercanía y confianza."},
+            {"texto": "Un roce de un segundo en el antebrazo de la otra persona aumenta la confianza en un sesenta por ciento."},
             {"texto": "La psicología lo llama el Toque de Midas. Humaniza la interacción instantáneamente."},
             {"texto": "Úsalo al pedir un favor o cerrar un trato, pero siempre de forma muy sutil y rápida."},
             {"texto": "Conviértete en un experto en lenguaje no verbal con los libros de la descripción."}
@@ -371,7 +348,7 @@ PACK_GUIONES = {
             {"texto": "El Efecto Forer explica por qué crees que tu horóscopo siempre acierta."},
             {"texto": "Aceptamos descripciones vagas y generales como si fueran personalizadas solo para nosotros."},
             {"texto": "Si te dicen: 'A veces eres sociable, pero otras necesitas tu espacio', creerás que te están leyendo la mente."},
-            {"texto": "Blinda tu mente contra engaños con los audiolibros recomendados en la descripción."}
+            {"texto": "Blinda tu mente contra engaños con los audiolibros gratis de la descripción."}
         ]
     },
     "31. Ley de Reciprocidad": {
@@ -418,20 +395,20 @@ PACK_GUIONES = {
         "cabecera": "LENGUAJE DE LA ATRACCIÓN",
         "titulo_yt": "Cómo Saber si le Gustas a Alguien Mirando sus Pupilas #Shorts #Amor",
         "escenas": [
-            {"texto": "Cuando miramos algo o a alguien que nos resulta muy atractivo, nuestras pupilas pueden dilatarse."},
-            {"texto": "Es una respuesta del sistema nervioso autónomo, difícil de controlar de forma consciente."},
-            {"texto": "Pero también cambian con la luz y con otras emociones, así que no es una prueba definitiva."},
+            {"texto": "Cuando miramos algo o a alguien que nos resulta muy atractivo, nuestras pupilas se dilatan."},
+            {"texto": "Es una respuesta del sistema nervioso autónomo imposible de falsificar."},
+            {"texto": "Si sus ojos se ven más oscuros y grandes al mirarte en un lugar iluminado, le gustas."},
             {"texto": "Lee a las personas como un libro abierto con los enlaces de la descripción."}
         ]
     },
     "36. Postura de Poder": {
         "cabecera": "HACKEA TU CEREBRO",
-        "titulo_yt": "Postura de Poder: ¿Funciona de Verdad? #Shorts #Confianza",
+        "titulo_yt": "Haz esta Postura 2 Minutos para Eliminar el Miedo #Shorts #Confianza",
         "escenas": [
-            {"texto": "Tu postura puede influir en cómo te sientes, aunque sus efectos hormonales no se han confirmado."},
+            {"texto": "Tu cuerpo no solo refleja cómo te sientes, también puede cambiar tus hormonas."},
             {"texto": "Párate con los brazos en jarra y las piernas separadas durante dos minutos."},
-            {"texto": "Los estudios posteriores no confirmaron cambios hormonales, pero muchas personas dicen sentirse más seguras."},
-            {"texto": "Construye una autoestima sólida con los audiolibros de la descripción."}
+            {"texto": "Esta postura reduce el cortisol, la hormona del estrés, y dispara tu nivel de testosterona."},
+            {"texto": "Construye una autoestima inquebrantable con los audiolibros de la descripción."}
         ]
     },
     "37. El Pie en la Puerta": {
@@ -450,7 +427,7 @@ PACK_GUIONES = {
         "escenas": [
             {"texto": "¿Sientes que todos te juzgan cuando entras a un sitio o cometes un pequeño error?"},
             {"texto": "Es el Efecto Spotlight. Tu cerebro magnifica cuánta atención te prestan los demás."},
-            {"texto": "La realidad es que la mayoría de la gente está demasiado preocupada por sí misma."},
+            {"texto": "La realidad es que el noventa por ciento de la gente está demasiado preocupada por sí misma."},
             {"texto": "Libérate de la ansiedad social con los libros de psicología de la descripción."}
         ]
     },
@@ -509,8 +486,8 @@ PACK_GUIONES = {
         "titulo_yt": "Por Qué Duele Tanto Soltar a Quien te Hace Daño #Shorts #Psicologia",
         "escenas": [
             {"texto": "Si no puedes alejarte de quien te maltrata emocionalmente, no eres débil."},
-            {"texto": "Se llama Vínculo Traumático: el ciclo de maltrato y reconciliación crea una dependencia emocional muy intensa."},
-            {"texto": "Por eso cuesta tanto soltar, y pedir ayuda profesional puede marcar la diferencia."},
+            {"texto": "Estás bajo un Vínculo Traumático. El ciclo de abuso segrega tanta adrenalina que altera tu química cerebral."},
+            {"texto": "Es un síndrome real de abstinencia, exactamente igual que dejar una droga dura."},
             {"texto": "Encuentra herramientas para sanar en los enlaces de la descripción."}
         ]
     },
@@ -576,7 +553,6 @@ PACK_GUIONES = {
     }
 }
 
-
 # ==============================================================================
 # HISTORIAL
 # ==============================================================================
@@ -586,194 +562,128 @@ def cargar_historial():
     with open(ARCHIVO_HISTORIAL, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
-
 def guardar_historial(tema):
     with open(ARCHIVO_HISTORIAL, "a", encoding="utf-8") as f:
         f.write(f"{tema}\n")
 
-
 # ==============================================================================
-# AUDIO Y TIEMPOS
+# AUDIO, TIEMPOS E IA (WAV2LIP)
 # ==============================================================================
-def _ffmpeg(*args):
-    subprocess.run(
-        ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", *args],
-        check=True,
-    )
-
-
-def _duracion_wav(ruta):
-    with wave.open(ruta, "rb") as w:
-        return w.getnframes() / float(w.getframerate())
-
-
-async def _tts_con_reintentos(texto, voz, ruta_mp3, intentos=3):
-    ultimo_error = None
-    for n in range(intentos):
-        try:
-            await edge_tts.Communicate(texto, voz, rate="+5%").save(ruta_mp3)
-            return
-        except Exception as e:  # red inestable, 403 temporal, etc.
-            ultimo_error = e
-            print(f"⚠️ edge-tts falló (intento {n + 1}/{intentos}): {e}", flush=True)
-            await asyncio.sleep(3)
-    raise RuntimeError(f"edge-tts no pudo generar el audio: {ultimo_error}")
-
-
 async def generar_audio_y_tiempos(escenas, ruta_out):
-    os.makedirs(CARPETA, exist_ok=True)
-    voz = "es-ES-ElviraNeural"
-
-    # Todo se normaliza a 44100 Hz mono PCM 16 bit para que la concatenación sea exacta
-    ruta_silencio = os.path.abspath(os.path.join(CARPETA, "silence.wav"))
-    _ffmpeg("-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-t", "0.2",
-            "-c:a", "pcm_s16le", ruta_silencio)
-
     tiempos_textos = []
     tiempo_actual = 0.0
-    ruta_lista = os.path.join(CARPETA, "lista_audio.txt")
+    carpeta = "render_tmp"
+    os.makedirs(carpeta, exist_ok=True)
+    
+    voz = "es-ES-ElviraNeural"
+    
+    ruta_silencio = os.path.join(carpeta, "silence.wav")
+    os.system(f"ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.2 -q:a 9 -acodec pcm_s16le {ruta_silencio} -y -hide_banner -loglevel error")
 
-    with open(ruta_lista, "w", encoding="utf-8") as f_list:
+    with open("temp_list.txt", "w") as f_list:
         for i, esc in enumerate(escenas):
-            ruta_mp3 = os.path.join(CARPETA, f"voz_{i}.mp3")
-            ruta_wav = os.path.abspath(os.path.join(CARPETA, f"voz_{i}.wav"))
-
-            await _tts_con_reintentos(esc["texto"], voz, ruta_mp3)
-            _ffmpeg("-i", ruta_mp3, "-ar", "44100", "-ac", "1", "-c:a", "pcm_s16le", ruta_wav)
-
-            dur = _duracion_wav(ruta_wav)
+            ruta_mp3 = os.path.join(carpeta, f"voz_{i}.mp3")
+            comunicador = edge_tts.Communicate(esc["texto"], voz, rate="+5%")
+            await comunicador.save(ruta_mp3)
+            
+            audio_clip = AudioFileClip(ruta_mp3)
+            dur = audio_clip.duration
+            
             tiempos_textos.append((tiempo_actual, tiempo_actual + dur, esc["texto"]))
             tiempo_actual += dur + 0.2
-
+            
+            ruta_wav = os.path.join(carpeta, f"voz_{i}.wav")
+            audio_clip.write_audiofile(ruta_wav, logger=None)
             f_list.write(f"file '{ruta_wav}'\n")
+            f_list.write(f"duration {dur}\n")
             f_list.write(f"file '{ruta_silencio}'\n")
-
-    _ffmpeg("-f", "concat", "-safe", "0", "-i", ruta_lista, "-c:a", "pcm_s16le", ruta_out)
+            f_list.write(f"duration 0.2\n")
+    
+    os.system(f"ffmpeg -f concat -safe 0 -i temp_list.txt -c copy {ruta_out} -y -hide_banner -loglevel error")
+    
     return tiempos_textos
 
+def dibujar_subtitulos(frame, t, tiempos_textos, cabecera):
+    # FORZAMOS LA RESOLUCIÓN 1080x1920 PARA QUE SIEMPRE COINCIDA CON LA CAPA
+    img = Image.fromarray(frame).resize((1080, 1920), Image.LANCZOS).convert("RGBA")
+    capa = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+    dr_capa = ImageDraw.Draw(capa)
+    
+    dr_capa.rectangle([(0, 0), (1080, 230)], fill=(0, 0, 0, 160))
+    dr_capa.rectangle([(0, 1200), (1080, 1720)], fill=(0, 0, 0, 150))
+    img = Image.alpha_composite(img, capa).convert("RGB")
+    draw = ImageDraw.Draw(img)
 
-# ==============================================================================
-# SUBTÍTULOS (capas precalculadas: las fuentes y los textos se dibujan una sola vez)
-# ==============================================================================
-RUTA_FUENTE = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-
-
-def _cargar_fuente(tam):
     try:
-        return ImageFont.truetype(RUTA_FUENTE, tam)
-    except OSError:
-        return ImageFont.load_default()
+        f_cab = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 46)
+        f_sub = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
+    except:
+        f_cab = ImageFont.load_default()
+        f_sub = ImageFont.load_default()
 
+    bbox_c = draw.textbbox((0, 0), cabecera, font=f_cab)
+    draw.text(((1080 - (bbox_c[2] - bbox_c[0])) / 2, 95), cabecera, font=f_cab, fill="#FFE600", stroke_width=4, stroke_fill="#000000")
 
-FUENTE_CAB = _cargar_fuente(46)
-FUENTE_SUB = _cargar_fuente(60)
+    texto_actual = ""
+    for inicio, fin, txt in tiempos_textos:
+        if inicio <= t <= (fin + 0.2):
+            texto_actual = txt
+            break
 
+    if texto_actual:
+        palabras = texto_actual.upper().split()
+        lineas, actual = [], []
+        for p in palabras:
+            if len(" ".join(actual + [p])) > 19:
+                lineas.append(" ".join(actual))
+                actual = [p]
+            else:
+                actual.append(p)
+        if actual: lineas.append(" ".join(actual))
 
-def _capa_base(cabecera):
-    capa = Image.new("RGBA", (ANCHO, ALTO), (0, 0, 0, 0))
-    d = ImageDraw.Draw(capa)
-    d.rectangle([(0, 0), (ANCHO, 230)], fill=(0, 0, 0, 160))
-    d.rectangle([(0, 1200), (ANCHO, 1720)], fill=(0, 0, 0, 150))
-    bbox = d.textbbox((0, 0), cabecera, font=FUENTE_CAB)
-    d.text(((ANCHO - (bbox[2] - bbox[0])) / 2, 95), cabecera, font=FUENTE_CAB,
-           fill="#FFE600", stroke_width=4, stroke_fill="#000000")
-    return capa
+        y = 1250
+        for idx, lin in enumerate(lineas):
+            color = "#00FF88" if idx == len(lineas)-1 else "#FFFFFF"
+            bbox = draw.textbbox((0, 0), lin, font=f_sub)
+            draw.text(((1080 - (bbox[2] - bbox[0])) / 2, y), lin, font=f_sub, fill=color, stroke_width=5, stroke_fill="#000000")
+            y += (bbox[3] - bbox[1]) + 20
 
+    return np.array(img)
 
-def _capa_escena(cabecera, texto):
-    capa = _capa_base(cabecera)
-    d = ImageDraw.Draw(capa)
-
-    palabras = texto.upper().split()
-    lineas, actual = [], []
-    for p in palabras:
-        if len(" ".join(actual + [p])) > 19:
-            lineas.append(" ".join(actual))
-            actual = [p]
-        else:
-            actual.append(p)
-    if actual:
-        lineas.append(" ".join(actual))
-
-    y = 1250
-    for idx, lin in enumerate(lineas):
-        color = "#00FF88" if idx == len(lineas) - 1 else "#FFFFFF"
-        bbox = d.textbbox((0, 0), lin, font=FUENTE_SUB)
-        d.text(((ANCHO - (bbox[2] - bbox[0])) / 2, y), lin, font=FUENTE_SUB,
-               fill=color, stroke_width=5, stroke_fill="#000000")
-        y += (bbox[3] - bbox[1]) + 20
-    return capa
-
-
-def crear_renderer(tiempos_textos, cabecera):
-    base = _capa_base(cabecera)
-    capas = [_capa_escena(cabecera, txt) for _, _, txt in tiempos_textos]
-
-    def render(get_frame, t):
-        capa = base
-        for i, (inicio, fin, _) in enumerate(tiempos_textos):
-            if inicio <= t <= (fin + 0.2):
-                capa = capas[i]
-                break
-        img = Image.fromarray(get_frame(t)).convert("RGBA")
-        return np.array(Image.alpha_composite(img, capa).convert("RGB"))
-
-    return render
-
-
-# ==============================================================================
-# PRODUCCIÓN DEL VÍDEO (WAV2LIP)
-# ==============================================================================
 def producir_video_avatar(clave, datos):
     print(f"🎬 Iniciando producción AVATAR: {clave}", flush=True)
-    os.makedirs(CARPETA, exist_ok=True)
-    audio_maestro = os.path.abspath(os.path.join(CARPETA, "audio_maestro.wav"))
+    os.makedirs("render_tmp", exist_ok=True)
+    audio_maestro = "render_tmp/audio_maestro.wav"
 
     tiempos_textos = asyncio.run(generar_audio_y_tiempos(datos["escenas"], audio_maestro))
 
-    print("🤖 Iniciando renderizado de Inteligencia Artificial (Wav2Lip)...", flush=True)
-    ruta_avatar_ia = os.path.abspath(os.path.join(CARPETA, "avatar_hablando.mp4"))
-    if os.path.exists(ruta_avatar_ia):
-        os.remove(ruta_avatar_ia)
-
-    comando_ia = [
-        sys.executable, "inference.py",
-        "--checkpoint_path", "checkpoints/wav2lip_gan.pth",
-        "--face", os.path.abspath("avatar.jpg"),
-        "--audio", audio_maestro,
-        "--outfile", ruta_avatar_ia,
-        "--nosmooth",
-        # Valor por defecto de Wav2Lip. Si se corta la barbilla, prueba 0 15 0 0
-        "--pads", "0", "10", "0", "0",
-    ]
-    subprocess.run(comando_ia, cwd="Wav2Lip", check=True)
+    print("🤖 Iniciando renderizado de Inteligencia Artificial (Wav2Lip)...")
+    ruta_avatar_ia = "render_tmp/avatar_hablando.mp4"
+    comando_ia = (
+        "cd Wav2Lip && python inference.py "
+        "--checkpoint_path checkpoints/wav2lip_gan.pth "
+        "--face ../avatar.jpg "
+        f"--audio ../{audio_maestro} "
+        f"--outfile ../{ruta_avatar_ia} "
+        "--nosmooth"
+    )
+    os.system(comando_ia)
 
     if not os.path.exists(ruta_avatar_ia):
         raise FileNotFoundError(f"El modelo de IA falló y no generó {ruta_avatar_ia}")
 
-    print("✍️ Quemando subtítulos sincronizados...", flush=True)
+    print("✍️ Quemando subtítulos sincronizados...")
     video_ia = VideoFileClip(ruta_avatar_ia)
+    
+    # Hemos quitado el crop conflictivo, ahora el ajuste fino se hace en dibujar_subtitulos
+    video_final = video_ia.fl(lambda gf, t: dibujar_subtitulos(gf(t), t, tiempos_textos, datos["cabecera"]))
 
-    # Ajuste a 1080x1920: escala para cubrir y recorta el sobrante desde el centro
-    w, h = video_ia.size
-    escala = max(ANCHO / w, ALTO / h)
-    nuevo_w = math.ceil(round(w * escala, 6))
-    nuevo_h = math.ceil(round(h * escala, 6))
-    video = video_ia.resize((nuevo_w, nuevo_h)).crop(
-        x_center=nuevo_w / 2, y_center=nuevo_h / 2, width=ANCHO, height=ALTO
-    )
-
-    video_final = video.fl(crear_renderer(tiempos_textos, datos["cabecera"]))
-
-    mp4_out = os.path.join(CARPETA, "VIDEO_FINAL_AVATAR.mp4")
+    mp4_out = "render_tmp/VIDEO_FINAL_AVATAR.mp4"
     video_final.write_videofile(
-        mp4_out, fps=FPS, codec="libx264", audio_codec="aac",
-        preset="veryfast", threads=2,
-        ffmpeg_params=["-pix_fmt", "yuv420p", "-crf", "23"], logger=None
+        mp4_out, fps=24, codec="libx264", audio_codec="aac",
+        preset="veryfast", ffmpeg_params=["-pix_fmt", "yuv420p"], logger=None
     )
-    video_ia.close()
     return mp4_out
-
 
 # ==============================================================================
 # PUBLICACIÓN: TELEGRAM
@@ -783,11 +693,17 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
         print("⚠️ Faltan credenciales de Telegram. Omitiendo.")
         return False
 
-    titulo_limpio = titulo_yt[:100].strip()
-    descripcion_yt = construir_descripcion(libro_elegido)
+    titulo_yt_limpio = titulo_yt[:100].strip()
+    descripcion_yt = (
+        f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
+        f"🎧 Prueba Audible 90 días GRATIS (Audiolibros ilimitados):\n{LINK_AUDIBLE}\n\n"
+        f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
+        f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
+        f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion"
+    )
     descripcion_tiktok = (
-        f"{titulo_limpio} 🧠 Prueba Audible en el enlace de mi perfil 🔗 "
-        f"Vídeo con avatar y voz generados con IA. #publi #psicologia #lenguajecorporal"
+        f"{titulo_yt_limpio} 🧠 Prueba GRATIS de Audible en el enlace de mi perfil 🔗 "
+        f"#publi #psicologia #psicologiaoscura #lenguajecorporal"
     )
 
     url_video = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendVideo"
@@ -799,7 +715,7 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
                 url_video,
                 data={
                     "chat_id": TELEGRAM_CHAT_ID,
-                    "caption": f"🎬 <b>VÍDEO LISTO:</b> {html.escape(titulo_limpio)}",
+                    "caption": f"🎬 <b>VÍDEO LISTO:</b> {titulo_yt_limpio}",
                     "parse_mode": "HTML",
                     "supports_streaming": "true"
                 },
@@ -812,18 +728,16 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
 
         texto_copiable = (
             f"📋 <b>TOCA CADA CAJA PARA COPIARLA:</b>\n\n"
-            f"1️⃣ <b>TÍTULO YOUTUBE SHORTS:</b>\n<code>{html.escape(titulo_limpio)}</code>\n\n"
-            f"2️⃣ <b>DESCRIPCIÓN YOUTUBE:</b>\n<code>{html.escape(descripcion_yt)}</code>\n\n"
-            f"3️⃣ <b>DESCRIPCIÓN TIKTOK:</b>\n<code>{html.escape(descripcion_tiktok)}</code>"
+            f"1️⃣ <b>TÍTULO YOUTUBE SHORTS:</b>\n<code>{titulo_yt_limpio}</code>\n\n"
+            f"2️⃣ <b>DESCRIPCIÓN YOUTUBE:</b>\n<code>{descripcion_yt}</code>\n\n"
+            f"3️⃣ <b>DESCRIPCIÓN TIKTOK:</b>\n<code>{descripcion_tiktok}</code>"
         )
-        requests.post(url_msg, data={"chat_id": TELEGRAM_CHAT_ID, "text": texto_copiable,
-                                     "parse_mode": "HTML"}, timeout=30)
+        requests.post(url_msg, data={"chat_id": TELEGRAM_CHAT_ID, "text": texto_copiable, "parse_mode": "HTML"}, timeout=30)
         print("✅ ¡Vídeo y textos enviados a Telegram!")
         return True
     except Exception as e:
         print(f"❌ Error enviando a Telegram: {e}")
         return False
-
 
 # ==============================================================================
 # PUBLICACIÓN: INSTAGRAM REELS
@@ -832,20 +746,30 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
     INSTA_USER = os.getenv("INSTA_USER")
     INSTA_PASS = os.getenv("INSTA_PASS")
     INSTA_SESSION = os.getenv("INSTA_SESSION")
-
+    
     if not all([INSTA_USER, INSTA_PASS, INSTA_SESSION]):
         print("⚠️ Faltan credenciales de Instagram. Omitiendo.")
         return False
 
-    descripcion_ig = f"{titulo_yt[:100].strip()}\n\n{construir_descripcion(libro_elegido)}"
+    titulo_limpio = titulo_yt[:100].strip()
+    descripcion_ig = (
+        f"{titulo_limpio}\n\n"
+        f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
+        f"🎧 Prueba Audible 90 días GRATIS (Audiolibros ilimitados):\n{LINK_AUDIBLE}\n\n"
+        f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
+        f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
+        f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
+    )
 
     print("📱 Conectando a Instagram mediante sesión inyectada...")
     try:
         cl = Client()
-        cl.delay_range = [2, 6]
-        cl.set_settings(json.loads(INSTA_SESSION))
+        cl.delay_range = [2, 6] 
+        sesion_guardada = json.loads(INSTA_SESSION)
+        cl.settings = sesion_guardada
+        cl.set_settings(sesion_guardada)
         cl.login(INSTA_USER, INSTA_PASS)
-
+        
         print("🚀 Subiendo Reel a Instagram...")
         cl.clip_upload(
             video_path,
@@ -857,28 +781,14 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
             }
         )
         print("✅ ¡Reel publicado con éxito en Instagram!")
-        print("ℹ️ Recuerda activar a mano la etiqueta 'Contenido generado por IA' en el Reel.")
         return True
     except Exception as e:
         print(f"❌ Error subiendo a Instagram: {e}")
         return False
 
-
 # ==============================================================================
 # PUBLICACIÓN: YOUTUBE SHORTS
 # ==============================================================================
-def _subir_a_youtube(youtube, body, video_path):
-    media = MediaFileUpload(video_path, mimetype="video/mp4", chunksize=-1, resumable=True)
-    request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
-
-    response = None
-    while response is None:
-        status, response = request.next_chunk()
-        if status:
-            print(f"    Subiendo a YouTube: {int(status.progress() * 100)}%")
-    return response
-
-
 def publicar_youtube_short(video_path, titulo_yt, libro_elegido):
     YT_CLIENT_ID = os.getenv("YT_CLIENT_ID")
     YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET")
@@ -898,39 +808,39 @@ def publicar_youtube_short(video_path, titulo_yt, libro_elegido):
             token_uri="https://oauth2.googleapis.com/token"
         )
         youtube = build("youtube", "v3", credentials=creds)
-
+        descripcion_yt = (
+            f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
+            f"🎧 Prueba Audible 90 días GRATIS (Audiolibros ilimitados):\n{LINK_AUDIBLE}\n\n"
+            f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
+            f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
+            f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
+        )
         body = {
             "snippet": {
-                "title": titulo_yt[:100].strip(),
-                "description": construir_descripcion(libro_elegido),
+                "title": titulo_yt,
+                "description": descripcion_yt,
                 "tags": ["psicologia", "shorts", "psicologia oscura", "desarrollo personal"],
                 "categoryId": "27"
             },
             "status": {
                 "privacyStatus": "public",
-                "selfDeclaredMadeForKids": False,
-                # Avatar y voz son sintéticos: se declara como contenido alterado/sintético
-                "containsSyntheticMedia": True
+                "selfDeclaredMadeForKids": False
             }
         }
+        media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
+        request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
 
-        try:
-            response = _subir_a_youtube(youtube, body, video_path)
-        except HttpError as e:
-            if e.resp.status == 400 and "containsSyntheticMedia" in str(e):
-                print("⚠️ La API no aceptó containsSyntheticMedia. Subo sin el campo: "
-                      "márcalo como contenido sintético en YouTube Studio.")
-                body["status"].pop("containsSyntheticMedia", None)
-                response = _subir_a_youtube(youtube, body, video_path)
-            else:
-                raise
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            if status:
+                print(f"    Subiendo a YouTube: {int(status.progress() * 100)}%")
 
         print(f"✅ ¡Short publicado con éxito en YouTube! ID: {response.get('id')}")
         return True
     except Exception as e:
         print(f"❌ Error subiendo a YouTube: {e}")
         return False
-
 
 # ==============================================================================
 # MAIN
@@ -953,19 +863,14 @@ if __name__ == "__main__":
     libro_al_azar = random.choice(LIBROS_AFILIADOS)
 
     ruta_mp4 = producir_video_avatar(clave_elegida, datos)
-
+    
+    # Publicación
     exito_telegram = enviar_pack_telegram(ruta_mp4, datos["titulo_yt"], libro_al_azar)
-    exito_ig = False
-    exito_yt = False
-
-    if SOLO_TELEGRAM:
-        print("🧪 Modo prueba: no se publica en Instagram ni YouTube y no se guarda el historial.")
+    exito_ig = publicar_instagram_reel(ruta_mp4, datos["titulo_yt"], libro_al_azar)
+    exito_yt = publicar_youtube_short(ruta_mp4, datos["titulo_yt"], libro_al_azar)
+    
+    if exito_telegram or exito_ig or exito_yt:
+        guardar_historial(clave_elegida)
+        print("🎉 Proceso de avatar completado con éxito.")
     else:
-        exito_ig = publicar_instagram_reel(ruta_mp4, datos["titulo_yt"], libro_al_azar)
-        exito_yt = publicar_youtube_short(ruta_mp4, datos["titulo_yt"], libro_al_azar)
-
-        if exito_telegram or exito_ig or exito_yt:
-            guardar_historial(clave_elegida)
-            print("🎉 Proceso de avatar completado con éxito.")
-        else:
-            print("⚠️ Hubo un fallo en la distribución.")
+        print("⚠️ Hubo un fallo en la distribución.")
