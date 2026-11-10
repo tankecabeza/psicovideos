@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import wave
 import random
 import asyncio
 import urllib.parse
@@ -10,19 +9,7 @@ import json
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import edge_tts
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip
-
-# --- PARCHE PARA PYTORCH 2.6+ ---
-import torch
-if hasattr(torch.serialization, 'add_safe_globals'):
-    torch.serialization.add_safe_globals([getattr(torch, 'FloatStorage', None)])
-if hasattr(torch, 'load'):
-    original_load = torch.load
-    def patched_load(*args, **kwargs):
-        kwargs['weights_only'] = False
-        return original_load(*args, **kwargs)
-    torch.load = patched_load
-# --------------------------------
+from moviepy.editor import VideoClip, AudioFileClip
 
 from instagrapi import Client
 from google.oauth2.credentials import Credentials
@@ -37,6 +24,13 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 ARCHIVO_HISTORIAL = "historial_videos.txt"
 LINK_AUDIBLE = "https://link.amazon/A091gjPQC"
 
+# Estilo común para todas las imágenes generadas con IA
+ESTILO_IMAGEN = (
+    "cinematic vertical photo, dramatic lighting, dark moody atmosphere, "
+    "psychology and human behavior theme, highly detailed, sharp focus, "
+    "no text, no letters, no watermark"
+)
+
 LIBROS_AFILIADOS = [
     {"titulo": "La Psicología del Lenguaje Corporal (6 Libros en 1)", "link": "https://link.amazon/B0gBvsEJI"},
     {"titulo": "Manual de Psicología de la Motivación", "link": "https://link.amazon/B0a48ro38"},
@@ -49,6 +43,8 @@ LIBROS_AFILIADOS = [
 
 # ==============================================================================
 # MEGA BASE DE DATOS DE 50 GUIONES COMPLETOS
+# (Opcional: cada escena puede llevar "img": "descripción en inglés" para
+#  controlar la imagen. Si no la lleva, se genera sola a partir del texto.)
 # ==============================================================================
 PACK_GUIONES = {
     "1. Trucos contra manipuladores": {
@@ -567,16 +563,16 @@ def guardar_historial(tema):
         f.write(f"{tema}\n")
 
 # ==============================================================================
-# AUDIO, TIEMPOS E IA (WAV2LIP)
+# AUDIO Y TIEMPOS
 # ==============================================================================
 async def generar_audio_y_tiempos(escenas, ruta_out):
     tiempos_textos = []
     tiempo_actual = 0.0
     carpeta = "render_tmp"
     os.makedirs(carpeta, exist_ok=True)
-    
+
     voz = "es-ES-ElviraNeural"
-    
+
     ruta_silencio = os.path.join(carpeta, "silence.wav")
     os.system(f"ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.2 -q:a 9 -acodec pcm_s16le {ruta_silencio} -y -hide_banner -loglevel error")
 
@@ -585,30 +581,82 @@ async def generar_audio_y_tiempos(escenas, ruta_out):
             ruta_mp3 = os.path.join(carpeta, f"voz_{i}.mp3")
             comunicador = edge_tts.Communicate(esc["texto"], voz, rate="+5%")
             await comunicador.save(ruta_mp3)
-            
+
             audio_clip = AudioFileClip(ruta_mp3)
             dur = audio_clip.duration
-            
+
             tiempos_textos.append((tiempo_actual, tiempo_actual + dur, esc["texto"]))
             tiempo_actual += dur + 0.2
-            
+
             ruta_wav = os.path.join(carpeta, f"voz_{i}.wav")
             audio_clip.write_audiofile(ruta_wav, logger=None)
+            audio_clip.close()
             f_list.write(f"file '{ruta_wav}'\n")
             f_list.write(f"duration {dur}\n")
             f_list.write(f"file '{ruta_silencio}'\n")
             f_list.write(f"duration 0.2\n")
-    
+
     os.system(f"ffmpeg -f concat -safe 0 -i temp_list.txt -c copy {ruta_out} -y -hide_banner -loglevel error")
-    
+
     return tiempos_textos
 
+# ==============================================================================
+# IMÁGENES CON IA (Pollinations, gratis y sin clave)
+# ==============================================================================
+def crear_fondo_respaldo(ruta, semilla):
+    """Degradado oscuro por si falla la IA, para que el vídeo nunca se rompa."""
+    rnd = random.Random(semilla)
+    c1 = np.array([rnd.randint(10, 60), rnd.randint(10, 40), rnd.randint(40, 110)], dtype=float)
+    c2 = np.array([rnd.randint(0, 25), rnd.randint(0, 25), rnd.randint(0, 40)], dtype=float)
+    grad = np.linspace(0, 1, 1920).reshape(-1, 1, 1)
+    arr = (c1 * (1 - grad) + c2 * grad) * np.ones((1920, 1080, 3))
+    Image.fromarray(arr.astype("uint8")).save(ruta, "JPEG", quality=92)
+
+def descargar_imagen_ia(prompt, ruta, semilla):
+    prompt = prompt[:380]
+    url = (
+        "https://image.pollinations.ai/prompt/" + urllib.parse.quote(prompt)
+        + f"?width=1080&height=1920&model=flux&nologo=true&seed={semilla}"
+    )
+    for intento in range(3):
+        try:
+            r = requests.get(url, timeout=150)
+            if r.status_code == 200 and r.headers.get("content-type", "").startswith("image"):
+                with open(ruta, "wb") as f:
+                    f.write(r.content)
+                Image.open(ruta).convert("RGB").save(ruta, "JPEG", quality=92)
+                return True
+            print(f"    ⚠️ Respuesta {r.status_code} de la IA de imágenes (intento {intento + 1})")
+        except Exception as e:
+            print(f"    ⚠️ Error de imagen (intento {intento + 1}): {e}")
+        time.sleep(6 * (intento + 1))
+    return False
+
+def generar_imagenes(escenas, cabecera):
+    carpeta = "render_tmp"
+    rutas = []
+    base_seed = random.randint(1, 10_000_000)
+    for i, esc in enumerate(escenas):
+        ruta = os.path.join(carpeta, f"img_{i}.jpg")
+        descripcion = esc.get("img") or f"{cabecera.lower()}, {esc['texto']}"
+        prompt = f"{descripcion}. {ESTILO_IMAGEN}"
+        print(f"🖼️ Generando imagen {i + 1}/{len(escenas)}...", flush=True)
+        ok = descargar_imagen_ia(prompt, ruta, base_seed + i)
+        if not ok:
+            print("    ↪ Usando fondo de respaldo.")
+            crear_fondo_respaldo(ruta, base_seed + i)
+        rutas.append(ruta)
+        time.sleep(3)
+    return rutas
+
+# ==============================================================================
+# SUBTÍTULOS
+# ==============================================================================
 def dibujar_subtitulos(frame, t, tiempos_textos, cabecera):
-    # FORZAMOS LA RESOLUCIÓN 1080x1920 PARA QUE SIEMPRE COINCIDA CON LA CAPA
     img = Image.fromarray(frame).resize((1080, 1920), Image.LANCZOS).convert("RGBA")
     capa = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
     dr_capa = ImageDraw.Draw(capa)
-    
+
     dr_capa.rectangle([(0, 0), (1080, 230)], fill=(0, 0, 0, 160))
     dr_capa.rectangle([(0, 1200), (1080, 1720)], fill=(0, 0, 0, 150))
     img = Image.alpha_composite(img, capa).convert("RGB")
@@ -650,36 +698,44 @@ def dibujar_subtitulos(frame, t, tiempos_textos, cabecera):
 
     return np.array(img)
 
-def producir_video_avatar(clave, datos):
-    print(f"🎬 Iniciando producción AVATAR: {clave}", flush=True)
+# ==============================================================================
+# PRODUCCIÓN DEL VÍDEO (imágenes IA + zoom suave + voz + subtítulos)
+# ==============================================================================
+def producir_video_imagenes(clave, datos):
+    print(f"🎬 Iniciando producción con IMÁGENES IA: {clave}", flush=True)
     os.makedirs("render_tmp", exist_ok=True)
     audio_maestro = "render_tmp/audio_maestro.wav"
 
     tiempos_textos = asyncio.run(generar_audio_y_tiempos(datos["escenas"], audio_maestro))
+    rutas_img = generar_imagenes(datos["escenas"], datos["cabecera"])
+    imagenes = [Image.open(p).convert("RGB").resize((1080, 1920), Image.LANCZOS) for p in rutas_img]
 
-    print("🤖 Iniciando renderizado de Inteligencia Artificial (Wav2Lip)...")
-    ruta_avatar_ia = "render_tmp/avatar_hablando.mp4"
-    comando_ia = (
-        "cd Wav2Lip && python inference.py "
-        "--checkpoint_path checkpoints/wav2lip_gan.pth "
-        "--face ../avatar.jpg "
-        f"--audio ../{audio_maestro} "
-        f"--outfile ../{ruta_avatar_ia} "
-        "--nosmooth"
-    )
-    os.system(comando_ia)
+    audio = AudioFileClip(audio_maestro)
+    dur_total = audio.duration
+    inicios = [t[0] for t in tiempos_textos]
+    n = len(inicios)
+    cabecera = datos["cabecera"]
 
-    if not os.path.exists(ruta_avatar_ia):
-        raise FileNotFoundError(f"El modelo de IA falló y no generó {ruta_avatar_ia}")
+    def make_frame(t):
+        idx = 0
+        for i in range(n):
+            if inicios[i] <= t:
+                idx = i
+        ini = inicios[idx]
+        fin = inicios[idx + 1] if idx + 1 < n else dur_total
+        prog = min(max((t - ini) / max(fin - ini, 0.1), 0.0), 1.0)
+        # Zoom suave: entra en las escenas pares, sale en las impares
+        z = 1.0 + 0.12 * prog if idx % 2 == 0 else 1.12 - 0.12 * prog
+        w, h = 1080 / z, 1920 / z
+        izq, arr = (1080 - w) / 2, (1920 - h) / 2
+        recorte = imagenes[idx].crop((izq, arr, izq + w, arr + h)).resize((1080, 1920), Image.BILINEAR)
+        return dibujar_subtitulos(np.array(recorte), t, tiempos_textos, cabecera)
 
-    print("✍️ Quemando subtítulos sincronizados...")
-    video_ia = VideoFileClip(ruta_avatar_ia)
-    
-    # Hemos quitado el crop conflictivo, ahora el ajuste fino se hace en dibujar_subtitulos
-    video_final = video_ia.fl(lambda gf, t: dibujar_subtitulos(gf(t), t, tiempos_textos, datos["cabecera"]))
+    print("✍️ Montando vídeo con subtítulos sincronizados...")
+    video = VideoClip(make_frame, duration=dur_total).set_audio(audio)
 
-    mp4_out = "render_tmp/VIDEO_FINAL_AVATAR.mp4"
-    video_final.write_videofile(
+    mp4_out = "render_tmp/VIDEO_FINAL.mp4"
+    video.write_videofile(
         mp4_out, fps=24, codec="libx264", audio_codec="aac",
         preset="veryfast", ffmpeg_params=["-pix_fmt", "yuv420p"], logger=None
     )
@@ -746,7 +802,7 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
     INSTA_USER = os.getenv("INSTA_USER")
     INSTA_PASS = os.getenv("INSTA_PASS")
     INSTA_SESSION = os.getenv("INSTA_SESSION")
-    
+
     if not all([INSTA_USER, INSTA_PASS, INSTA_SESSION]):
         print("⚠️ Faltan credenciales de Instagram. Omitiendo.")
         return False
@@ -764,18 +820,18 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
     print("📱 Conectando a Instagram mediante sesión inyectada...")
     try:
         cl = Client()
-        cl.delay_range = [2, 6] 
+        cl.delay_range = [2, 6]
         sesion_guardada = json.loads(INSTA_SESSION)
         cl.settings = sesion_guardada
         cl.set_settings(sesion_guardada)
         cl.login(INSTA_USER, INSTA_PASS)
-        
+
         print("🚀 Subiendo Reel a Instagram...")
         cl.clip_upload(
             video_path,
             descripcion_ig,
             extra_data={
-                "custom_accessibility_caption": "Vídeo animado de psicología y comportamiento humano.",
+                "custom_accessibility_caption": "Vídeo de psicología y comportamiento humano con imágenes ilustrativas.",
                 "like_and_view_counts_disabled": 0,
                 "disable_comments": 0,
             }
@@ -846,10 +902,6 @@ def publicar_youtube_short(video_path, titulo_yt, libro_elegido):
 # MAIN
 # ==============================================================================
 if __name__ == "__main__":
-    if not os.path.exists("avatar.jpg"):
-        print("❌ ERROR FATAL: No se ha encontrado la imagen 'avatar.jpg' en el repositorio.")
-        sys.exit(1)
-
     historial = cargar_historial()
     pendientes = [k for k in PACK_GUIONES if k not in historial]
 
@@ -862,15 +914,15 @@ if __name__ == "__main__":
     datos = PACK_GUIONES[clave_elegida]
     libro_al_azar = random.choice(LIBROS_AFILIADOS)
 
-    ruta_mp4 = producir_video_avatar(clave_elegida, datos)
-    
+    ruta_mp4 = producir_video_imagenes(clave_elegida, datos)
+
     # Publicación
     exito_telegram = enviar_pack_telegram(ruta_mp4, datos["titulo_yt"], libro_al_azar)
     exito_ig = publicar_instagram_reel(ruta_mp4, datos["titulo_yt"], libro_al_azar)
     exito_yt = publicar_youtube_short(ruta_mp4, datos["titulo_yt"], libro_al_azar)
-    
+
     if exito_telegram or exito_ig or exito_yt:
         guardar_historial(clave_elegida)
-        print("🎉 Proceso de avatar completado con éxito.")
+        print("🎉 Proceso completado con éxito.")
     else:
         print("⚠️ Hubo un fallo en la distribución.")
