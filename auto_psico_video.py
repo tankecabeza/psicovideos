@@ -7,7 +7,7 @@ import urllib.parse
 import requests
 import json
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import edge_tts
 from moviepy.editor import VideoClip, AudioFileClip
 
@@ -23,8 +23,10 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 ARCHIVO_HISTORIAL = "historial_videos.txt"
 
-# Enlace directo de Gumroad con el código de descuento automático
+# Enlaces de promoción del libro (Gumroad directo + Acortador Bitly)
 LINK_LIBRO = "https://tankecabeza.gumroad.com/l/arquitectura-mente/OFERTA"
+LINK_CORTO = "https://bit.ly/4AkPY0T"
+RUTA_PORTADA = "portada.jpg"
 
 # Estilo común para todas las imágenes generadas con IA
 ESTILO_IMAGEN = (
@@ -163,7 +165,7 @@ PACK_GUIONES = {
         "escenas": [
             {"texto": "Intentar parecer perfecto todo el tiempo genera rechazo y envidia en los demás."},
             {"texto": "Según la psicología, cometer un pequeño error torpe en público dispara tu carisma."},
-            {"texto": "Se llama Efecto Pratfall: muestras humanidad y haces que los demás se sientan cómodos."},
+            {"texto": "Se llama Efecto Pratfall: muestras humanidad y haces que los demás se sื่น cómodos."},
             {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
@@ -591,7 +593,7 @@ async def generar_audio_y_tiempos(escenas, ruta_out):
     return tiempos_textos
 
 # ==============================================================================
-# IMÁGENES CON IA (Pollinations, gratis y sin clave)
+# IMÁGENES CON IA + INTEGRACIÓN DE PORTADA DEL LIBRO (portada.jpg)
 # ==============================================================================
 def crear_fondo_respaldo(ruta, semilla):
     """Degradado oscuro por si falla la IA, para que el vídeo nunca se rompa."""
@@ -601,6 +603,43 @@ def crear_fondo_respaldo(ruta, semilla):
     grad = np.linspace(0, 1, 1920).reshape(-1, 1, 1)
     arr = (c1 * (1 - grad) + c2 * grad) * np.ones((1920, 1080, 3))
     Image.fromarray(arr.astype("uint8")).save(ruta, "JPEG", quality=92)
+
+def crear_escena_portada(ruta_destino):
+    """
+    Composición profesional 1080x1920 usando portada.jpg:
+    - Fondo: la propia portada escalada y desenfocada (efecto estudio oscuro)
+    - Centro superior (entre la cabecera y los subtítulos): la portada nítida con borde de destaque
+    """
+    if not os.path.exists(RUTA_PORTADA):
+        return False
+    try:
+        portada = Image.open(RUTA_PORTADA).convert("RGB")
+        # 1. Crear fondo vertical desenfocado y oscurecido
+        fondo = portada.resize((1080, 1920), Image.LANCZOS).filter(ImageFilter.GaussianBlur(28))
+        capa_oscura = Image.new("RGB", (1080, 1920), (8, 10, 22))
+        fondo = Image.blend(fondo, capa_oscura, 0.62)
+
+        # 2. Escalar la portada central para encajar entre la cabecera (y=230) y subtítulos (y=1200)
+        max_w, max_h = 680, 860
+        w_orig, h_orig = portada.size
+        ratio = min(max_w / w_orig, max_h / h_orig)
+        new_w, new_h = int(w_orig * ratio), int(h_orig * ratio)
+        portada_nitida = portada.resize((new_w, new_h), Image.LANCZOS)
+
+        # 3. Añadir un marco dorado/amarillo sutil para resaltar el libro
+        borde = 8
+        marco = Image.new("RGB", (new_w + borde * 2, new_h + borde * 2), (255, 230, 0))
+        marco.paste(portada_nitida, (borde, borde))
+
+        pos_x = (1080 - marco.width) // 2
+        pos_y = 250 + (920 - marco.height) // 2
+        fondo.paste(marco, (pos_x, pos_y))
+
+        fondo.save(ruta_destino, "JPEG", quality=95)
+        return True
+    except Exception as e:
+        print(f"    ⚠️ Error procesando portada.jpg: {e}")
+        return False
 
 def descargar_imagen_ia(prompt, ruta, semilla):
     prompt = prompt[:380]
@@ -626,11 +665,21 @@ def generar_imagenes(escenas, cabecera):
     carpeta = "render_tmp"
     rutas = []
     base_seed = random.randint(1, 10_000_000)
+    total = len(escenas)
+
     for i, esc in enumerate(escenas):
         ruta = os.path.join(carpeta, f"img_{i}.jpg")
+        es_escena_libro = (i == total - 1) or ("libro" in esc["texto"].lower())
+
+        # En la última escena (promoción del libro), usamos portada.jpg si existe en el repo
+        if es_escena_libro and crear_escena_portada(ruta):
+            print(f"📕 Escena {i + 1}/{total}: Portada del libro ({RUTA_PORTADA}) integrada con éxito.", flush=True)
+            rutas.append(ruta)
+            continue
+
         descripcion = esc.get("img") or f"{cabecera.lower()}, {esc['texto']}"
         prompt = f"{descripcion}. {ESTILO_IMAGEN}"
-        print(f"🖼️ Generando imagen {i + 1}/{len(escenas)}...", flush=True)
+        print(f"🖼️ Generando imagen {i + 1}/{total}...", flush=True)
         ok = descargar_imagen_ia(prompt, ruta, base_seed + i)
         if not ok:
             print("    ↪ Usando fondo de respaldo.")
@@ -677,11 +726,12 @@ def dibujar_subtitulos(frame, t, tiempos_textos, cabecera):
                 actual = [p]
             else:
                 actual.append(p)
-        if actual: lineas.append(" ".join(actual))
+        if actual:
+            lineas.append(" ".join(actual))
 
         y = 1250
         for idx, lin in enumerate(lineas):
-            color = "#00FF88" if idx == len(lineas)-1 else "#FFFFFF"
+            color = "#00FF88" if idx == len(lineas) - 1 else "#FFFFFF"
             bbox = draw.textbbox((0, 0), lin, font=f_sub)
             draw.text(((1080 - (bbox[2] - bbox[0])) / 2, y), lin, font=f_sub, fill=color, stroke_width=5, stroke_fill="#000000")
             y += (bbox[3] - bbox[1]) + 20
@@ -689,10 +739,10 @@ def dibujar_subtitulos(frame, t, tiempos_textos, cabecera):
     return np.array(img)
 
 # ==============================================================================
-# PRODUCCIÓN DEL VÍDEO (imágenes IA + zoom suave + voz + subtítulos)
+# PRODUCCIÓN DEL VÍDEO (imágenes IA + portada libro + zoom suave + voz + subtítulos)
 # ==============================================================================
 def producir_video_imagenes(clave, datos):
-    print(f"🎬 Iniciando producción con IMÁGENES IA: {clave}", flush=True)
+    print(f"🎬 Iniciando producción con IMÁGENES IA + PORTADA: {clave}", flush=True)
     os.makedirs("render_tmp", exist_ok=True)
     audio_maestro = "render_tmp/audio_maestro.wav"
 
@@ -714,8 +764,11 @@ def producir_video_imagenes(clave, datos):
         ini = inicios[idx]
         fin = inicios[idx + 1] if idx + 1 < n else dur_total
         prog = min(max((t - ini) / max(fin - ini, 0.1), 0.0), 1.0)
-        # Zoom suave: entra en las escenas pares, sale en las impares
-        z = 1.0 + 0.12 * prog if idx % 2 == 0 else 1.12 - 0.12 * prog
+        # Zoom suave: en la escena final del libro hacemos un zoom mucho más sutil para no cortar la portada
+        if idx == n - 1:
+            z = 1.0 + 0.04 * prog
+        else:
+            z = 1.0 + 0.12 * prog if idx % 2 == 0 else 1.12 - 0.12 * prog
         w, h = 1080 / z, 1920 / z
         izq, arr = (1080 - w) / 2, (1920 - h) / 2
         recorte = imagenes[idx].crop((izq, arr, izq + w, arr + h)).resize((1080, 1920), Image.BILINEAR)
@@ -742,13 +795,14 @@ def enviar_pack_telegram(video_path, titulo_yt):
     titulo_yt_limpio = titulo_yt[:100].strip()
     descripcion_yt = (
         f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-        f"📕 Descarga mi manual 'Arquitectura de la Mente Invisible' y "
-        f"aprende a protegerte de la manipulación:\n👉 {LINK_LIBRO}\n\n"
-        f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion"
+        f"📕 Descarga mi libro 'Arquitectura de la Mente Invisible' con DESCUENTO:\n"
+        f"👉 {LINK_CORTO}\n"
+        f"🔗 Enlace directo: {LINK_LIBRO}\n\n"
+        f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
     )
     descripcion_tiktok = (
-        f"{titulo_yt_limpio} 🧠 Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil 🔗 "
-        f"#psicologia #psicologiaoscura #lenguajecorporal"
+        f"{titulo_yt_limpio} 🧠 Descarga mi libro 'Arquitectura de la Mente Invisible' en el enlace de mi perfil o aquí 👉 {LINK_CORTO} "
+        f"#psicologia #psicologiaoscura #lenguajecorporal #autoestima #manipulacion"
     )
 
     url_video = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendVideo"
@@ -800,8 +854,9 @@ def publicar_instagram_reel(video_path, titulo_yt):
     descripcion_ig = (
         f"{titulo_limpio}\n\n"
         f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-        f"📕 Descarga mi manual 'Arquitectura de la Mente Invisible' y "
-        f"aprende a protegerte de la manipulación:\n👉 {LINK_LIBRO}\n\n"
+        f"📕 Consigue mi libro 'Arquitectura de la Mente Invisible' en el enlace de mi perfil o entrando en:\n"
+        f"👉 {LINK_CORTO}\n"
+        f"🔗 {LINK_LIBRO}\n\n"
         f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
     )
 
@@ -854,15 +909,16 @@ def publicar_youtube_short(video_path, titulo_yt):
         youtube = build("youtube", "v3", credentials=creds)
         descripcion_yt = (
             f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-            f"📕 Descarga mi manual 'Arquitectura de la Mente Invisible' y "
-            f"aprende a protegerte de la manipulación:\n👉 {LINK_LIBRO}\n\n"
+            f"📕 Descarga mi manual 'Arquitectura de la Mente Invisible' con DESCUENTO aquí:\n"
+            f"👉 {LINK_CORTO}\n"
+            f"🔗 Enlace directo: {LINK_LIBRO}\n\n"
             f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
         )
         body = {
             "snippet": {
                 "title": titulo_yt,
                 "description": descripcion_yt,
-                "tags": ["psicologia", "shorts", "psicologia oscura", "desarrollo personal"],
+                "tags": ["psicologia", "shorts", "psicologia oscura", "desarrollo personal", "arquitectura de la mente invisible"],
                 "categoryId": "27"
             },
             "status": {
