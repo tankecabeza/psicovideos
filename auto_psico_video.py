@@ -22,7 +22,9 @@ if not hasattr(Image, "ANTIALIAS"):
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 ARCHIVO_HISTORIAL = "historial_videos.txt"
-LINK_AUDIBLE = "https://link.amazon/A091gjPQC"
+
+# Enlace directo de Gumroad con el código de descuento automático
+LINK_LIBRO = "https://tankecabeza.gumroad.com/l/arquitectura-mente/OFERTA"
 
 # Estilo común para todas las imágenes generadas con IA
 ESTILO_IMAGEN = (
@@ -31,20 +33,8 @@ ESTILO_IMAGEN = (
     "no text, no letters, no watermark"
 )
 
-LIBROS_AFILIADOS = [
-    {"titulo": "La Psicología del Lenguaje Corporal (6 Libros en 1)", "link": "https://link.amazon/B0gBvsEJI"},
-    {"titulo": "Manual de Psicología de la Motivación", "link": "https://link.amazon/B0a48ro38"},
-    {"titulo": "Psicología + Biblia = Sabiduría y Felicidad", "link": "https://link.amazon/B01Dbo2sd"},
-    {"titulo": "Gran Guía Visual de la Psicología", "link": "https://link.amazon/B05oFn5m8"},
-    {"titulo": "Psicología Oscura: Guía Esencial de Persuasión y PNL", "link": "https://link.amazon/B06iblozj"},
-    {"titulo": "Psicología del Color: Sentimientos y Razón", "link": "https://link.amazon/B0fGUqwUw"},
-    {"titulo": "Psico Cuentos: Inteligencia Emocional", "link": "https://link.amazon/B02pmWFFv"}
-]
-
 # ==============================================================================
 # MEGA BASE DE DATOS DE 50 GUIONES COMPLETOS
-# (Opcional: cada escena puede llevar "img": "descripción en inglés" para
-#  controlar la imagen. Si no la lleva, se genera sola a partir del texto.)
 # ==============================================================================
 PACK_GUIONES = {
     "1. Trucos contra manipuladores": {
@@ -54,7 +44,7 @@ PACK_GUIONES = {
             {"texto": "Si alguien te falta al respeto en público, aplica este truco inmediatamente."},
             {"texto": "Uno: mírale a los ojos en silencio durante cuatro segundos. Destruirás su seguridad."},
             {"texto": "Dos: pregúntale con voz calmada si se encuentra bien. Quedará en evidencia frente a todos."},
-            {"texto": "Tienes los mejores libros de persuasión y audiolibros gratis en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "2. Detectar mentiras FBI": {
@@ -64,7 +54,7 @@ PACK_GUIONES = {
             {"texto": "Así descubres a un mentiroso en menos de cinco segundos según exagentes del FBI."},
             {"texto": "Si repite exactamente tu pregunta antes de responder, está ganando tiempo para inventar."},
             {"texto": "Pídele que cuente la historia en orden inverso. Los mentirosos siempre se bloquean."},
-            {"texto": "Descubre los manuales de lectura corporal en los enlaces de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "3. El Efecto Escasez": {
@@ -74,7 +64,7 @@ PACK_GUIONES = {
             {"texto": "Deja de estar siempre disponible al instante para todo el mundo."},
             {"texto": "El cerebro humano desprecia lo abundante y se obsesiona con lo escaso."},
             {"texto": "Retira tu atención en silencio cuando no te valoren y empezarán a buscarte."},
-            {"texto": "Domina las leyes de la persuasión con los libros recomendados en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "4. Triangulación Visual": {
@@ -84,7 +74,7 @@ PACK_GUIONES = {
             {"texto": "Usa la mirada triangular para controlar lo que otra persona siente al hablar contigo."},
             {"texto": "Para generar atracción: mira a su ojo izquierdo, luego al derecho y baja a sus labios."},
             {"texto": "Para imponer respeto: mira a sus ojos y sube al centro de su frente. Desactivará su ego."},
-            {"texto": "Aprende todos los secretos del lenguaje corporal en el enlace de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "5. El Efecto Halo": {
@@ -94,7 +84,7 @@ PACK_GUIONES = {
             {"texto": "El efecto Halo es el sesgo inconsciente más poderoso de la mente humana."},
             {"texto": "En solo medio segundo, tu cerebro asume que alguien bien vestido es más honesto y capaz."},
             {"texto": "Incluso en los tribunales, los acusados con buena presencia reciben penas un veinte por ciento menores."},
-            {"texto": "Hackea los sesgos de tu mente con los audiolibros gratis de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "6. Gaslighting Sutil": {
@@ -104,7 +94,7 @@ PACK_GUIONES = {
             {"texto": "El luz de gas o gaslighting es la técnica de manipulación más destructiva que existe."},
             {"texto": "Si te repiten frases como: estás loco, eres demasiado sensible o eso nunca pasó..."},
             {"texto": "Están reescribiendo tu memoria poco a poco para que dependas de su versión de la realidad."},
-            {"texto": "Aprende a blindar tu mente contra manipuladores en el enlace de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "7. Efecto Zeigarnik": {
@@ -114,7 +104,7 @@ PACK_GUIONES = {
             {"texto": "Si quieres que alguien no deje de pensar en ti, aplica el Efecto Zeigarnik."},
             {"texto": "Nuestra mente borra lo que ya ha terminado, pero se queda atrapada en lo que queda a medias."},
             {"texto": "Termina la conversación en su punto más alto y su cerebro te recordará todo el día."},
-            {"texto": "Descubre más leyes del comportamiento humano en los libros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "8. Los pies no mienten": {
@@ -124,7 +114,7 @@ PACK_GUIONES = {
             {"texto": "El rostro humano está entrenado para fingir, pero los pies siempre dicen la verdad."},
             {"texto": "Si hablas con alguien y sus pies apuntan hacia la puerta, quiere irse aunque te sonría."},
             {"texto": "Si cruza los tobillos debajo de la silla en una negociación, está ocultando información."},
-            {"texto": "Domina los seis libros del lenguaje corporal en el enlace de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "9. Paradoja de la Elección": {
@@ -134,7 +124,7 @@ PACK_GUIONES = {
             {"texto": "Tener demasiadas opciones no te hace más libre, te hace más infeliz."},
             {"texto": "Se llama Paradoja de la Elección: a partir de cinco alternativas, tu cerebro entra en fatiga."},
             {"texto": "Para decidir como un estratega, descarta todo rápido y quédate solo con tres caminos."},
-            {"texto": "Entrena tu enfoque mental con los audiolibros recomendados en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "10. Técnica del Espejo": {
@@ -144,7 +134,7 @@ PACK_GUIONES = {
             {"texto": "¿Quieres ganarte la confianza de un desconocido en menos de un minuto?"},
             {"texto": "Imita con dos segundos de retraso su postura, la velocidad al hablar y sus gestos."},
             {"texto": "Sus neuronas espejo se activarán y sentirá una conexión inexplicable contigo."},
-            {"texto": "Tienes la guía maestra de persuasión en los enlaces de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "11. El Efecto Franklin": {
@@ -154,7 +144,7 @@ PACK_GUIONES = {
             {"texto": "Si alguien te tiene manía sin motivo, no intentes hacerle un favor. Pídeselo tú a él."},
             {"texto": "Pídele algo minúsculo, como que te preste un bolígrafo o te dé un consejo rápido."},
             {"texto": "Su cerebro resolverá la disonancia cognitiva convenciéndose de que en realidad le caes bien."},
-            {"texto": "Aprende psicología aplicada en los libros y audiolibros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "12. El Anclaje en Negociación": {
@@ -164,7 +154,7 @@ PACK_GUIONES = {
             {"texto": "En cualquier negociación, la primera cifra que se dice en voz alta gana la partida."},
             {"texto": "Se llama Sesgo de Anclaje: el cerebro usa el primer número como referencia absoluta."},
             {"texto": "Si pides primero algo elevado, la contraoferta siempre será mucho más alta de lo normal."},
-            {"texto": "Domina el arte de negociar con los libros recomendados en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "13. El Efecto Pratfall": {
@@ -174,7 +164,7 @@ PACK_GUIONES = {
             {"texto": "Intentar parecer perfecto todo el tiempo genera rechazo y envidia en los demás."},
             {"texto": "Según la psicología, cometer un pequeño error torpe en público dispara tu carisma."},
             {"texto": "Se llama Efecto Pratfall: muestras humanidad y haces que los demás se sientan cómodos."},
-            {"texto": "Mejora tu inteligencia social con los libros del enlace en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "14. Bombardeo de Amor": {
@@ -184,7 +174,7 @@ PACK_GUIONES = {
             {"texto": "Desconfía de quien te promete amor eterno y te llena de regalos en la primera semana."},
             {"texto": "Los perfiles narcisistas usan el bombardeo de afecto para crear adicción a su validación."},
             {"texto": "En cuanto estés enganchado, retirarán todo el cariño de golpe para tener el control."},
-            {"texto": "Protege tu paz mental con las guías de psicología de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "15. La Regla de los 3 Segundos": {
@@ -194,7 +184,7 @@ PACK_GUIONES = {
             {"texto": "Las personas más respetadas nunca responden al instante cuando les hacen una pregunta."},
             {"texto": "Hacen una pausa de dos a tres segundos mirando al interlocutor antes de hablar."},
             {"texto": "Ese breve silencio demuestra calma absoluta y hace que cada palabra parezca oro."},
-            {"texto": "Desarrolla una mentalidad inquebrantable con los audiolibros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "16. Psicología del Color Rojo": {
@@ -204,7 +194,7 @@ PACK_GUIONES = {
             {"texto": "El color que llevas puesto altera el pulso cardíaco de las personas que te miran."},
             {"texto": "El azul marino proyecta autoridad y lealtad; por eso se usa en juicios y bancos."},
             {"texto": "El negro impone distancia y poder, mientras que el rojo activa la urgencia y atracción."},
-            {"texto": "Descubre el libro oficial de la psicología del color en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "17. El Efecto Pigmalión": {
@@ -214,7 +204,7 @@ PACK_GUIONES = {
             {"texto": "Trata a un hombre como lo que es y seguirá igual; trátalo como puede llegar a ser y se transformará."},
             {"texto": "El Efecto Pigmalión demuestra que rendimos según lo que creemos que esperan de nosotros."},
             {"texto": "Aléjate de quienes dudan de tu capacidad, porque tu subconsciente absorberá sus límites."},
-            {"texto": "Potencia tu motivación al máximo con los libros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "18. La Técnica del Disco Rayado": {
@@ -224,7 +214,7 @@ PACK_GUIONES = {
             {"texto": "Cuando dices que no, el error más grave que puedes cometer es dar excusas largas."},
             {"texto": "Un manipulador usará tus propias excusas como puntos débiles para seguir insistiendo."},
             {"texto": "Repite la misma frase corta y tranquila una y otra vez. Se quedarán sin munición."},
-            {"texto": "Aprende asertividad y defensa verbal en los enlaces de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "19. El Efecto Dunning-Kruger": {
@@ -234,7 +224,7 @@ PACK_GUIONES = {
             {"texto": "Cuanto menos sabe una persona sobre un tema, más segura está de tener toda la razón."},
             {"texto": "Se conoce como efecto Dunning-Kruger: la ignorancia da una confianza ciega."},
             {"texto": "Por el contrario, las mentes más brillantes suelen dudar porque conocen la complejidad real."},
-            {"texto": "Alimenta tu mente cada día con los audiolibros gratis de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "20. Microexpresión de Desprecio": {
@@ -244,7 +234,7 @@ PACK_GUIONES = {
             {"texto": "Existe un gesto facial que dura menos de medio segundo y predice la traición."},
             {"texto": "Si al contar un logro tuyo, alguien levanta solo una comisura de los labios..."},
             {"texto": "Es la microexpresión universal del desprecio y la envidia. Nunca falla."},
-            {"texto": "Aprende a leer cada gesto humano con el pack de libros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "21. Ley de Parkinson": {
@@ -254,7 +244,7 @@ PACK_GUIONES = {
             {"texto": "Si te das una semana para hacer un trabajo de dos horas, tardarás exactamente una semana."},
             {"texto": "La Ley de Parkinson dicta que el trabajo se expande hasta ocupar todo el tiempo disponible."},
             {"texto": "Ponte plazos artificialmente cortos y verás cómo tu enfoque se multiplica por diez."},
-            {"texto": "Domina tu disciplina y motivación con los libros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "22. La Mirada al Mentón": {
@@ -264,7 +254,7 @@ PACK_GUIONES = {
             {"texto": "En situaciones de tensión, tu cuello revela instantáneamente tu rango en el grupo."},
             {"texto": "Cuando tenemos miedo, bajamos la barbilla por instinto para proteger la garganta."},
             {"texto": "Mantener el mentón ligeramente elevado envía una señal biológica de calma y liderazgo."},
-            {"texto": "Descubre los secretos del lenguaje no verbal en la descripción del vídeo."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "23. El Sesgo del Costo Hundido": {
@@ -274,7 +264,7 @@ PACK_GUIONES = {
             {"texto": "¿Por qué nos cuesta tanto abandonar un mal negocio o una relación que ya no funciona?"},
             {"texto": "Tu cerebro odia admitir que el tiempo y esfuerzo que ya invertiste se han perdido."},
             {"texto": "Los grandes estrategas no miran lo que ya costó, solo evalúan lo que les costará seguir ahí."},
-            {"texto": "Aprende a pensar con claridad con los libros recomendados en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "24. El Secreto de los Cuentos": {
@@ -284,7 +274,7 @@ PACK_GUIONES = {
             {"texto": "Cuando das datos fríos, el cerebro de quien te escucha activa sus barreras críticas."},
             {"texto": "Pero cuando cuentas una historia, su mente baja la guardia y libera oxitocina."},
             {"texto": "Quien domina el arte de contar historias, domina las emociones de los demás."},
-            {"texto": "Explora la psicología a través de las historias en el enlace de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "25. Técnica de la Confusión": {
@@ -294,7 +284,7 @@ PACK_GUIONES = {
             {"texto": "Si alguien te está gritando o atacando verbalmente, no te defiendas."},
             {"texto": "Míralo fijamente a la frente y haz una pregunta totalmente fuera de contexto."},
             {"texto": "Pregunta algo como: ¿Llevas los zapatos desatados? Su cerebro se reiniciará por la confusión."},
-            {"texto": "Aprende a controlar la mente humana con los libros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "26. Ilusión de Alternativa": {
@@ -304,7 +294,7 @@ PACK_GUIONES = {
             {"texto": "Nunca preguntes a alguien si quiere hacer algo, dale dos opciones que te beneficien a ti."},
             {"texto": "En lugar de decir: ¿Nos vemos hoy?, di: ¿Prefieres vernos a las cinco o a las seis?"},
             {"texto": "Su cerebro elegirá la opción más cómoda, olvidando que podía haber dicho que no."},
-            {"texto": "Tienes audiolibros de persuasión avanzada gratis en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "27. Refuerzo Intermitente": {
@@ -314,7 +304,7 @@ PACK_GUIONES = {
             {"texto": "El refuerzo intermitente es la misma técnica que usan las máquinas tragaperras para crear adicción."},
             {"texto": "Si alguien te da mucha atención un día y te ignora al siguiente, tu cerebro libera dopamina por la incertidumbre."},
             {"texto": "Terminas obsesionándote no por amor, sino por adicción química a su validación."},
-            {"texto": "Protege tus emociones con las guías de psicología de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "28. Efecto Espectador": {
@@ -324,7 +314,7 @@ PACK_GUIONES = {
             {"texto": "Si tienes una emergencia en la calle, no grites pidiendo ayuda al aire."},
             {"texto": "Por el Efecto Espectador, todos pensarán que alguien más intervendrá y nadie hará nada."},
             {"texto": "Señala a una persona específica y dale una orden: Tú, el de la chaqueta azul, llama a emergencias."},
-            {"texto": "Descubre cómo funciona la mente en masa en el enlace de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "29. El Toque de Midas": {
@@ -334,7 +324,7 @@ PACK_GUIONES = {
             {"texto": "Un roce de un segundo en el antebrazo de la otra persona aumenta la confianza en un sesenta por ciento."},
             {"texto": "La psicología lo llama el Toque de Midas. Humaniza la interacción instantáneamente."},
             {"texto": "Úsalo al pedir un favor o cerrar un trato, pero siempre de forma muy sutil y rápida."},
-            {"texto": "Conviértete en un experto en lenguaje no verbal con los libros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "30. Efecto Forer": {
@@ -344,7 +334,7 @@ PACK_GUIONES = {
             {"texto": "El Efecto Forer explica por qué crees que tu horóscopo siempre acierta."},
             {"texto": "Aceptamos descripciones vagas y generales como si fueran personalizadas solo para nosotros."},
             {"texto": "Si te dicen: 'A veces eres sociable, pero otras necesitas tu espacio', creerás que te están leyendo la mente."},
-            {"texto": "Blinda tu mente contra engaños con los audiolibros gratis de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "31. Ley de Reciprocidad": {
@@ -354,7 +344,7 @@ PACK_GUIONES = {
             {"texto": "Si quieres que alguien haga algo por ti, hazle tú un pequeño favor no solicitado primero."},
             {"texto": "La neurociencia demuestra que el ser humano odia estar en deuda social con otros."},
             {"texto": "Sentirá una presión psicológica inmensa por devolverte el favor cuando se lo pidas."},
-            {"texto": "Domina la persuasión ética con los manuales recomendados en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "32. Triángulo de Karpman": {
@@ -364,7 +354,7 @@ PACK_GUIONES = {
             {"texto": "Cuidado con las personas que siempre se quejan de que el mundo está contra ellos."},
             {"texto": "Te arrastrarán a jugar el papel de Salvador para que les resuelvas la vida."},
             {"texto": "En cuanto dejes de complacerles, te convertirán en el Perseguidor y el malo de su historia."},
-            {"texto": "Aprende a establecer límites de acero en los enlaces de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "33. Técnica BYAF": {
@@ -374,7 +364,7 @@ PACK_GUIONES = {
             {"texto": "Existe una técnica psicológica que duplica la probabilidad de que te digan que sí."},
             {"texto": "Se llama BYAF por sus siglas en inglés: Pero Eres Libre De Elegir."},
             {"texto": "Al recordarle a la persona que tiene total libertad, reduces su mecanismo de defensa a cero."},
-            {"texto": "Descubre los mayores secretos de ventas en los audiolibros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "34. Efecto de Arrastre": {
@@ -384,7 +374,7 @@ PACK_GUIONES = {
             {"texto": "Tu cerebro está programado biológicamente para encajar en la tribu."},
             {"texto": "El Efecto de Arrastre hace que ignores tu propia lógica si ves a la mayoría haciendo otra cosa."},
             {"texto": "Es el sesgo exacto que usan las marcas para poner 'El más vendido' y que compres sin pensar."},
-            {"texto": "Despierta tu mente crítica con los libros recomendados en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "35. Falso Reflejo Pupilar": {
@@ -394,7 +384,7 @@ PACK_GUIONES = {
             {"texto": "Cuando miramos algo o a alguien que nos resulta muy atractivo, nuestras pupilas se dilatan."},
             {"texto": "Es una respuesta del sistema nervioso autónomo imposible de falsificar."},
             {"texto": "Si sus ojos se ven más oscuros y grandes al mirarte en un lugar iluminado, le gustas."},
-            {"texto": "Lee a las personas como un libro abierto con los enlaces de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "36. Postura de Poder": {
@@ -404,7 +394,7 @@ PACK_GUIONES = {
             {"texto": "Tu cuerpo no solo refleja cómo te sientes, también puede cambiar tus hormonas."},
             {"texto": "Párate con los brazos en jarra y las piernas separadas durante dos minutos."},
             {"texto": "Esta postura reduce el cortisol, la hormona del estrés, y dispara tu nivel de testosterona."},
-            {"texto": "Construye una autoestima inquebrantable con los audiolibros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "37. El Pie en la Puerta": {
@@ -414,7 +404,7 @@ PACK_GUIONES = {
             {"texto": "Nunca pidas un favor enorme de entrada porque activas las defensas de la otra persona."},
             {"texto": "Pide primero un favor diminuto que sea imposible de rechazar."},
             {"texto": "Una vez que hayan aceptado lo pequeño, su cerebro se compromete y aceptará el favor grande."},
-            {"texto": "Domina los secretos de la persuasión en el enlace de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "38. Efecto Spotlight": {
@@ -424,7 +414,7 @@ PACK_GUIONES = {
             {"texto": "¿Sientes que todos te juzgan cuando entras a un sitio o cometes un pequeño error?"},
             {"texto": "Es el Efecto Spotlight. Tu cerebro magnifica cuánta atención te prestan los demás."},
             {"texto": "La realidad es que el noventa por ciento de la gente está demasiado preocupada por sí misma."},
-            {"texto": "Libérate de la ansiedad social con los libros de psicología de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "39. Paradoja de Abilene": {
@@ -434,7 +424,7 @@ PACK_GUIONES = {
             {"texto": "A veces un grupo de personas hace un plan que en realidad ninguno de ellos quería hacer."},
             {"texto": "Se llama Paradoja de Abilene. Ocurre porque todos creen que los demás quieren hacerlo y callan."},
             {"texto": "No tengas miedo a ser el único en decir que no. Probablemente muchos piensen como tú."},
-            {"texto": "Desarrolla liderazgo e inteligencia emocional con los enlaces de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "40. Sesgo de Confirmación": {
@@ -444,7 +434,7 @@ PACK_GUIONES = {
             {"texto": "Es biológicamente imposible convencer con datos lógicos a alguien radicalizado."},
             {"texto": "El sesgo de confirmación hace que su cerebro solo procese la información que le da la razón."},
             {"texto": "Cualquier prueba en contra la ignorarán o la usarán para enfadarse aún más."},
-            {"texto": "Aprende a proteger tu energía mental con los manuales de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "41. Principio de Contraste": {
@@ -454,7 +444,7 @@ PACK_GUIONES = {
             {"texto": "Si compras un traje caro, el vendedor siempre te ofrecerá la corbata después, nunca antes."},
             {"texto": "Por el Principio de Contraste, el cerebro ve cincuenta dólares como poco dinero tras gastar quinientos."},
             {"texto": "Hackean tu percepción matemática manipulando el orden en que te presentan los precios."},
-            {"texto": "Evita caer en trampas mentales con los audiolibros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "42. Efecto de Mera Exposición": {
@@ -464,7 +454,7 @@ PACK_GUIONES = {
             {"texto": "Cuanto más vemos una cara, más atractiva y confiable nos empieza a parecer."},
             {"texto": "Se llama Efecto de Mera Exposición. Es la razón por la que la publicidad repite los anuncios."},
             {"texto": "Aparecer de forma constante y sutil en la vida de alguien dispara su afinidad hacia ti."},
-            {"texto": "Domina la psicología del amor con los libros recomendados en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "43. Condicionamiento Clásico": {
@@ -474,7 +464,7 @@ PACK_GUIONES = {
             {"texto": "Puedes condicionar a una persona para que asocie una emoción positiva a tu presencia."},
             {"texto": "Usa siempre el mismo perfume o gesto físico cuando se estén riendo a carcajadas contigo."},
             {"texto": "Meses después, solo con oler ese aroma, su cerebro liberará endorfinas automáticamente."},
-            {"texto": "Tienes las mejores guías de programación neurolingüística en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "44. El Vínculo Traumático": {
@@ -484,7 +474,7 @@ PACK_GUIONES = {
             {"texto": "Si no puedes alejarte de quien te maltrata emocionalmente, no eres débil."},
             {"texto": "Estás bajo un Vínculo Traumático. El ciclo de abuso segrega tanta adrenalina que altera tu química cerebral."},
             {"texto": "Es un síndrome real de abstinencia, exactamente igual que dejar una droga dura."},
-            {"texto": "Encuentra herramientas para sanar en los enlaces de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "45. Ley de Atracción (Proximidad)": {
@@ -494,7 +484,7 @@ PACK_GUIONES = {
             {"texto": "Entrar en el espacio íntimo de alguien, a menos de medio metro, activa alarmas biológicas."},
             {"texto": "Pero si lo haces un segundo y retrocedes de inmediato, generas una tensión magnética."},
             {"texto": "Se llama baile de proxemia. Es el arma de seducción más silenciosa y efectiva que existe."},
-            {"texto": "Descubre cómo leer el cuerpo de los demás en el libro de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "46. Sesgo de Supervivencia": {
@@ -504,7 +494,7 @@ PACK_GUIONES = {
             {"texto": "Si copias la rutina matutina de un millonario, no te harás millonario."},
             {"texto": "Es el Sesgo de Supervivencia: solo vemos a los pocos que triunfaron, no a los miles que fracasaron."},
             {"texto": "El éxito a menudo requiere mucha más suerte y contexto del que te quieren vender."},
-            {"texto": "Protege tu mente y tu dinero con la psicología recomendada en la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "47. Reactancia Psicológica": {
@@ -514,7 +504,7 @@ PACK_GUIONES = {
             {"texto": "El ser humano tiene una necesidad biológica de proteger su libertad de elección."},
             {"texto": "Si le prohíbes algo a alguien de forma tajante, sentirá un deseo incontrolable de hacerlo."},
             {"texto": "Usa la reactancia a tu favor desafiando sus capacidades: Apuesto a que no eres capaz de hacerlo."},
-            {"texto": "Controla los hilos de la persuasión con los audiolibros de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "48. Técnica del Bostezo": {
@@ -524,7 +514,7 @@ PACK_GUIONES = {
             {"texto": "¿Quieres saber si alguien del grupo te está observando cuando no miras?"},
             {"texto": "Finge un bostezo enorme y exagerado. Y acto seguido mira a esa persona."},
             {"texto": "El bostezo es tan contagioso que, si te estaba mirando, bostezará inevitablemente."},
-            {"texto": "Aprende todos los trucos de lectura mental en los enlaces de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "49. Efecto Zeigarnik en el Amor": {
@@ -534,7 +524,7 @@ PACK_GUIONES = {
             {"texto": "Si revelas todos tus sentimientos en la primera cita, aburrirás al cerebro del otro."},
             {"texto": "A la mente le fascinan los puzzles sin resolver. Debes dejar que adivinen un poco."},
             {"texto": "Retírate siempre antes de que la conversación muera. Les dejarás queriendo más."},
-            {"texto": "Encuentra la psicología de la seducción en los manuales de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     },
     "50. El Poder de los Nombres": {
@@ -544,7 +534,7 @@ PACK_GUIONES = {
             {"texto": "Para cualquier persona, el sonido más importante de todo el idioma es su propio nombre."},
             {"texto": "Pronunciar su nombre al principio o al final de una frase capta su atención inconsciente al instante."},
             {"texto": "Aumenta tu carisma y dominancia usando el nombre de los demás de forma estratégica."},
-            {"texto": "Tienes las claves maestras del liderazgo en el enlace de la descripción."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
         ]
     }
 }
@@ -744,7 +734,7 @@ def producir_video_imagenes(clave, datos):
 # ==============================================================================
 # PUBLICACIÓN: TELEGRAM
 # ==============================================================================
-def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
+def enviar_pack_telegram(video_path, titulo_yt):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("⚠️ Faltan credenciales de Telegram. Omitiendo.")
         return False
@@ -752,14 +742,13 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
     titulo_yt_limpio = titulo_yt[:100].strip()
     descripcion_yt = (
         f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-        f"🎧 Prueba Audible 90 días GRATIS (Audiolibros ilimitados):\n{LINK_AUDIBLE}\n\n"
-        f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
-        f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
-        f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion"
+        f"📕 Descarga mi manual 'Arquitectura de la Mente Invisible' y "
+        f"aprende a protegerte de la manipulación:\n👉 {LINK_LIBRO}\n\n"
+        f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion"
     )
     descripcion_tiktok = (
-        f"{titulo_yt_limpio} 🧠 Prueba GRATIS de Audible en el enlace de mi perfil 🔗 "
-        f"#publi #psicologia #psicologiaoscura #lenguajecorporal"
+        f"{titulo_yt_limpio} 🧠 Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil 🔗 "
+        f"#psicologia #psicologiaoscura #lenguajecorporal"
     )
 
     url_video = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendVideo"
@@ -798,7 +787,7 @@ def enviar_pack_telegram(video_path, titulo_yt, libro_elegido):
 # ==============================================================================
 # PUBLICACIÓN: INSTAGRAM REELS
 # ==============================================================================
-def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
+def publicar_instagram_reel(video_path, titulo_yt):
     INSTA_USER = os.getenv("INSTA_USER")
     INSTA_PASS = os.getenv("INSTA_PASS")
     INSTA_SESSION = os.getenv("INSTA_SESSION")
@@ -811,10 +800,9 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
     descripcion_ig = (
         f"{titulo_limpio}\n\n"
         f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-        f"🎧 Prueba Audible 90 días GRATIS (Audiolibros ilimitados):\n{LINK_AUDIBLE}\n\n"
-        f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
-        f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
-        f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
+        f"📕 Descarga mi manual 'Arquitectura de la Mente Invisible' y "
+        f"aprende a protegerte de la manipulación:\n👉 {LINK_LIBRO}\n\n"
+        f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
     )
 
     print("📱 Conectando a Instagram mediante sesión inyectada...")
@@ -845,7 +833,7 @@ def publicar_instagram_reel(video_path, titulo_yt, libro_elegido):
 # ==============================================================================
 # PUBLICACIÓN: YOUTUBE SHORTS
 # ==============================================================================
-def publicar_youtube_short(video_path, titulo_yt, libro_elegido):
+def publicar_youtube_short(video_path, titulo_yt):
     YT_CLIENT_ID = os.getenv("YT_CLIENT_ID")
     YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET")
     YT_REFRESH_TOKEN = os.getenv("YT_REFRESH_TOKEN")
@@ -866,10 +854,9 @@ def publicar_youtube_short(video_path, titulo_yt, libro_elegido):
         youtube = build("youtube", "v3", credentials=creds)
         descripcion_yt = (
             f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-            f"🎧 Prueba Audible 90 días GRATIS (Audiolibros ilimitados):\n{LINK_AUDIBLE}\n\n"
-            f"📚 Libro recomendado de hoy: {libro_elegido['titulo']}\n"
-            f"👉 Consíguelo aquí: {libro_elegido['link']}\n\n"
-            f"#publi #psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
+            f"📕 Descarga mi manual 'Arquitectura de la Mente Invisible' y "
+            f"aprende a protegerte de la manipulación:\n👉 {LINK_LIBRO}\n\n"
+            f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
         )
         body = {
             "snippet": {
@@ -912,14 +899,13 @@ if __name__ == "__main__":
 
     clave_elegida = random.choice(pendientes)
     datos = PACK_GUIONES[clave_elegida]
-    libro_al_azar = random.choice(LIBROS_AFILIADOS)
 
     ruta_mp4 = producir_video_imagenes(clave_elegida, datos)
 
-    # Publicación
-    exito_telegram = enviar_pack_telegram(ruta_mp4, datos["titulo_yt"], libro_al_azar)
-    exito_ig = publicar_instagram_reel(ruta_mp4, datos["titulo_yt"], libro_al_azar)
-    exito_yt = publicar_youtube_short(ruta_mp4, datos["titulo_yt"], libro_al_azar)
+    # Publicación orientada a ventas propias
+    exito_telegram = enviar_pack_telegram(ruta_mp4, datos["titulo_yt"])
+    exito_ig = publicar_instagram_reel(ruta_mp4, datos["titulo_yt"])
+    exito_yt = publicar_youtube_short(ruta_mp4, datos["titulo_yt"])
 
     if exito_telegram or exito_ig or exito_yt:
         guardar_historial(clave_elegida)
