@@ -26,3 +26,4 @@
 30. Efecto Forer
 17. El Efecto Pigmalión
 13. El Efecto Pratfall
+40. Sesgo de Confirmación
