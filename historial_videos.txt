@@ -34,3 +34,4 @@
 45. Ley de Atracción (Proximidad)
 32. Triángulo de Karpman
 28. Efecto Espectador
+42. Efecto de Mera Exposición
