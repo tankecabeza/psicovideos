@@ -35,3 +35,4 @@
 32. Triángulo de Karpman
 28. Efecto Espectador
 42. Efecto de Mera Exposición
+12. El Anclaje en Negociación
