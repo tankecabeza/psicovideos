@@ -42,3 +42,4 @@
 27. Refuerzo Intermitente
 25. Técnica de la Confusión
 34. Efecto de Arrastre
+2. Detectar mentiras FBI
