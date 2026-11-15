@@ -43,3 +43,4 @@
 25. Técnica de la Confusión
 34. Efecto de Arrastre
 2. Detectar mentiras FBI
+41. Principio de Contraste
