@@ -44,3 +44,4 @@
 34. Efecto de Arrastre
 2. Detectar mentiras FBI
 41. Principio de Contraste
+24. El Secreto de los Cuentos
