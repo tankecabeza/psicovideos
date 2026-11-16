@@ -10,7 +10,11 @@ import json
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import edge_tts
-from moviepy.editor import VideoClip, AudioFileClip
+
+# Importamos moviepy y aplicamos el puente de compatibilidad para instagrapi >= 2.1
+import moviepy
+from moviepy.editor import VideoClip, AudioFileClip, VideoFileClip
+moviepy.VideoFileClip = VideoFileClip
 
 from instagrapi import Client
 from instagrapi.types import StoryLink
@@ -611,23 +615,45 @@ def descargar_imagen_leonardo(prompt, ruta):
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
-        "authorization": f"Bearer {API_KEY}"
+        "authorization": f"Bearer {API_KEY.strip()}"
     }
     
-    # ⚠️ Volvemos a 768x1024. El modelo base de Leonardo da error 400 con anchos no estándar como 576.
-    payload = {
-        "height": 1024,
-        "width": 768, 
-        "prompt": prompt,
-        "num_images": 1
-    }
+    # Intentamos primero con Leonardo Kino XL (ideal para estilo cinemático en 9:16)
+    # y si la cuenta requiere parámetros estándar, probamos el fallback de 512x768.
+    configs = [
+        {
+            "modelId": "aa77f04e-3eec-4034-9c07-d0f619684628", # Leonardo Kino XL
+            "height": 1024,
+            "width": 576,
+            "prompt": prompt[:900],
+            "num_images": 1
+        },
+        {
+            "height": 768,
+            "width": 512,
+            "prompt": prompt[:900],
+            "num_images": 1
+        }
+    ]
     
+    gen_id = None
+    for cfg in configs:
+        try:
+            r = requests.post(url_gen, json=cfg, headers=headers, timeout=30)
+            if r.status_code == 200:
+                gen_id = r.json().get("sdGenerationJob", {}).get("generationId")
+                if gen_id:
+                    break
+            else:
+                print(f"    ⚠️ Leonardo API ({r.status_code}): {r.text[:180]}")
+        except Exception as e:
+            print(f"    ⚠️ Error de conexión en Leonardo AI: {e}")
+            return False
+
+    if not gen_id:
+        return False
+
     try:
-        r = requests.post(url_gen, json=payload, headers=headers, timeout=30)
-        r.raise_for_status()
-        gen_id = r.json().get("sdGenerationJob", {}).get("generationId")
-        if not gen_id: return False
-        
         url_get = f"https://cloud.leonardo.ai/api/rest/v1/generations/{gen_id}"
         for _ in range(15):
             time.sleep(4)
@@ -643,7 +669,7 @@ def descargar_imagen_leonardo(prompt, ruta):
             elif status == "FAILED":
                 return False
     except Exception as e:
-        print(f"    ⚠️ Error en Leonardo AI: {e}")
+        print(f"    ⚠️ Error descargando de Leonardo AI: {e}")
         return False
     return False
 
@@ -778,7 +804,22 @@ def producir_video_imagenes(clave, datos):
 
     tiempos_textos = asyncio.run(generar_audio_y_tiempos(datos["escenas"], audio_maestro))
     rutas_img = generar_imagenes(datos["escenas"], datos["cabecera"])
-    imagenes = [Image.open(p).convert("RGB").resize((1080, 1920), Image.LANCZOS) for p in rutas_img]
+    
+    # Redimensionado manteniendo proporción (recorte al centro si es 3:4 para no estirar)
+    imagenes = []
+    for p in rutas_img:
+        im = Image.open(p).convert("RGB")
+         ratio_obj = 1080 / 1920
+        ratio_im = im.width / im.height
+        if ratio_im > ratio_obj:
+            nuevo_w = int(im.height * ratio_obj)
+            offset = (im.width - nuevo_w) // 2
+            im = im.crop((offset, 0, offset + nuevo_w, im.height))
+        elif ratio_im < ratio_obj:
+            nuevo_h = int(im.width / ratio_obj)
+            offset = (im.height - nuevo_h) // 2
+            im = im.crop((0, offset, im.width, offset + nuevo_h))
+        imagenes.append(im.resize((1080, 1920), Image.LANCZOS))
 
     audio = AudioFileClip(audio_maestro)
     dur_total = audio.duration
@@ -825,6 +866,9 @@ def producir_video_imagenes(clave, datos):
         mp4_out, fps=24, codec="libx264", audio_codec="aac",
         preset="veryfast", ffmpeg_params=["-pix_fmt", "yuv420p"], logger=None
     )
+    
+    # Guardamos miniatura preventiva para Instagram
+    Image.fromarray(make_frame(0.5)).save(f"{mp4_out}.jpg", "JPEG", quality=92)
     return mp4_out
 
 # ==============================================================================
@@ -913,8 +957,6 @@ def publicar_instagram_reel(video_path, titulo_yt):
         cl.delay_range = [2, 6]
         
         # --- PARCHE DEFINITIVO ERROR 404 qe/expose ---
-        # Interceptamos la petición interna a los servidores de Meta para que omita 
-        # las rutas obsoletas que Instagram ya ha borrado, evitando el bloqueo.
         original_request = cl.private_request
         def patched_request(endpoint, *args, **kwargs):
             if "qe/expose" in endpoint:
@@ -927,30 +969,40 @@ def publicar_instagram_reel(video_path, titulo_yt):
         cl.set_settings(sesion_guardada)
         cl.login(INSTA_USER, INSTA_PASS)
 
+        exito_alguna = False
+        thumb_path = f"{video_path}.jpg" if os.path.exists(f"{video_path}.jpg") else None
+
         print("🚀 Subiendo Reel a Instagram...")
-        cl.clip_upload(
-            video_path,
-            descripcion_ig,
-            extra_data={
-                "custom_accessibility_caption": "Vídeo de psicología y comportamiento humano.",
-                "like_and_view_counts_disabled": 0,
-                "disable_comments": 0,
-            }
-        )
-        print("✅ ¡Reel publicado con éxito en Instagram!")
+        try:
+            cl.clip_upload(
+                video_path,
+                descripcion_ig,
+                thumbnail=thumb_path,
+                extra_data={
+                    "custom_accessibility_caption": "Vídeo de psicología y comportamiento humano.",
+                    "like_and_view_counts_disabled": 0,
+                    "disable_comments": 0,
+                }
+            )
+            print("✅ ¡Reel publicado con éxito en Instagram!")
+            exito_alguna = True
+        except Exception as e:
+            print(f"❌ Error subiendo el Reel: {e}")
 
         print("🚀 Subiendo Historia con enlace al libro...")
         try:
             enlace = StoryLink(webUri=LINK_CORTO)
             cl.video_upload_to_story(
                 video_path,
+                thumbnail=thumb_path,
                 links=[enlace]
             )
             print("✅ ¡Historia publicada con éxito con el enlace!")
+            exito_alguna = True
         except Exception as e:
             print(f"❌ Error subiendo la Historia: {e}")
 
-        return True
+        return exito_alguna
     except Exception as e:
         print(f"❌ Error general en Instagram: {e}")
         return False
