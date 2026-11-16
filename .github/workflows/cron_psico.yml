@@ -13,6 +13,11 @@ on:
 permissions:
   contents: write
 
+# Evita que se solapen ejecuciones si una tarda demasiado
+concurrency:
+  group: psicovideos
+  cancel-in-progress: false
+
 jobs:
   publicar-video:
     runs-on: ubuntu-22.04
@@ -24,7 +29,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
 
       - name: Install system dependencies
@@ -35,8 +40,11 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install -r requirements.txt
-          # Ya no hace falta PyTorch ni Wav2Lip: el vídeo se monta con imágenes IA
-          pip install "numpy<2" "moviepy==1.0.3" "Pillow<10" edge-tts requests instagrapi google-api-python-client google-auth
+          # Instalación base
+          pip install "numpy<2" "moviepy==1.0.3" "Pillow<10" edge-tts requests google-api-python-client google-auth
+          # Forzamos la actualización de instagrapi para evitar errores heredados
+          pip install -U instagrapi
+          pip show instagrapi | head -2
 
       - name: Fabricar y enviar el vídeo
         env:
