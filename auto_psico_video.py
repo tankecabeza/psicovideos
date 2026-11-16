@@ -8,6 +8,7 @@ import json
 import subprocess
 import urllib.parse
 import wave
+import glob
 
 import requests
 import numpy as np
@@ -43,19 +44,6 @@ RUTA_PORTADA = "portada.jpg"
 W, H = 1080, 1920
 CARPETA = "render_tmp"
 FUENTE_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-
-ESTILO_IMAGEN = (
-    "cinematic vertical photo, dramatic lighting, dark moody atmosphere, "
-    "psychology and human behavior theme, highly detailed, sharp focus, "
-    "no text, no letters, no watermark"
-)
-
-# Búsquedas para el respaldo de fotos de Pexels (solo si defines PEXELS_API_KEY)
-PEXELS_QUERIES = [
-    "dark portrait", "silhouette shadow", "person thinking dark",
-    "city night alone", "mirror reflection person", "chess strategy dark",
-    "mysterious eyes", "moody street night",
-]
 
 # Texto base del CTA; al publicar se sustituye por una variante al azar.
 # Todas las variantes deben contener la palabra "libro" (así se detecta la escena de portada).
@@ -642,7 +630,7 @@ async def generar_audio_y_tiempos(escenas, ruta_out):
 
 
 # ==============================================================================
-# IMÁGENES (LEONARDO -> PEXELS -> POLLINATIONS -> DEGRADADO)
+# IMÁGENES
 # ==============================================================================
 def a_vertical(img):
     """Rellena 1080x1920 recortando, sin deformar la imagen."""
@@ -660,120 +648,6 @@ def crear_fondo_respaldo(ruta, semilla):
     grad = np.linspace(0, 1, H).reshape(-1, 1, 1)
     arr = (c1 * (1 - grad) + c2 * grad) * np.ones((H, W, 3))
     Image.fromarray(arr.astype("uint8")).save(ruta, "JPEG", quality=92)
-
-
-def descargar_imagen_leonardo(prompt, ruta):
-    API_KEY = os.getenv("LEONARDO_API_KEY")
-    if not API_KEY:
-        print("    ⚠️ LEONARDO_API_KEY no está en el entorno. Saltando Leonardo.")
-        return False
-
-    print("    🧠 Intentando con Leonardo AI...")
-    url_gen = "https://cloud.leonardo.ai/api/rest/v1/generations"
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "authorization": f"Bearer {API_KEY}",
-    }
-    payload = {"height": 1024, "width": 768, "prompt": prompt, "num_images": 1}
-    # Opcional: fija un modelo concreto con el secreto/variable LEONARDO_MODEL_ID
-    modelo = os.getenv("LEONARDO_MODEL_ID")
-    if modelo:
-        payload["modelId"] = modelo
-
-    try:
-        r = requests.post(url_gen, json=payload, headers=headers, timeout=30)
-        if r.status_code != 200:
-            # Aquí verás el motivo real del 400 (parámetro inválido, créditos, etc.)
-            print(f"    ⚠️ Leonardo respondió {r.status_code}: {r.text[:500]}")
-            return False
-
-        gen_id = (r.json().get("sdGenerationJob") or {}).get("generationId")
-        if not gen_id:
-            print(f"    ⚠️ Leonardo no devolvió generationId: {r.text[:300]}")
-            return False
-
-        url_get = f"https://cloud.leonardo.ai/api/rest/v1/generations/{gen_id}"
-        for _ in range(15):
-            time.sleep(4)
-            r_get = requests.get(url_get, headers=headers, timeout=30)
-            pk = r_get.json().get("generations_by_pk") or {}
-            status = pk.get("status")
-            if status == "COMPLETE":
-                img_url = pk["generated_images"][0]["url"]
-                img_data = requests.get(img_url, timeout=60).content
-                with open(ruta, "wb") as f:
-                    f.write(img_data)
-                guardar_jpg_vertical(ruta)  # 768x1024 -> recorte a 9:16 sin estirar
-                return True
-            if status == "FAILED":
-                print("    ⚠️ Leonardo marcó la generación como FAILED.")
-                return False
-        print("    ⚠️ Leonardo: tiempo de espera agotado.")
-    except Exception as e:
-        print(f"    ⚠️ Error en Leonardo AI: {e}")
-    return False
-
-
-def descargar_imagen_pexels(ruta, semilla):
-    """Respaldo gratuito con fotos de stock. Solo actúa si defines PEXELS_API_KEY."""
-    key = os.getenv("PEXELS_API_KEY")
-    if not key:
-        return False
-
-    print("    📷 Intentando con Pexels...")
-    rnd = random.Random(semilla)
-    consulta = rnd.choice(PEXELS_QUERIES)
-    try:
-        r = requests.get(
-            "https://api.pexels.com/v1/search",
-            headers={"Authorization": key},
-            params={"query": consulta, "orientation": "portrait", "per_page": 30},
-            timeout=30,
-        )
-        if r.status_code != 200:
-            print(f"    ⚠️ Pexels respondió {r.status_code}: {r.text[:200]}")
-            return False
-        fotos = r.json().get("photos", [])
-        if not fotos:
-            return False
-        src = rnd.choice(fotos)["src"]
-        url = src.get("large2x") or src.get("large")
-        data = requests.get(url, timeout=60).content
-        with open(ruta, "wb") as f:
-            f.write(data)
-        guardar_jpg_vertical(ruta)
-        return True
-    except Exception as e:
-        print(f"    ⚠️ Error en Pexels: {e}")
-        return False
-
-
-def descargar_imagen_pollinations(prompt, ruta, semilla):
-    print("    🌺 Intentando con Pollinations AI...")
-    url = (
-        "https://image.pollinations.ai/prompt/" + urllib.parse.quote(prompt[:380])
-        + f"?width={W}&height={H}&model=flux&nologo=true&seed={semilla}"
-    )
-    try:
-        r = requests.get(url, timeout=60)
-        if r.status_code == 200 and r.headers.get("content-type", "").startswith("image"):
-            with open(ruta, "wb") as f:
-                f.write(r.content)
-            guardar_jpg_vertical(ruta)
-            return True
-        print(f"    ⚠️ Respuesta {r.status_code} de Pollinations")
-    except Exception as e:
-        print(f"    ⚠️ Error de conexión Pollinations: {e}")
-    return False
-
-
-def descargar_imagen_ia(prompt, ruta, semilla):
-    return (
-        descargar_imagen_leonardo(prompt, ruta)
-        or descargar_imagen_pexels(ruta, semilla)
-        or descargar_imagen_pollinations(prompt, ruta, semilla)
-    )
 
 
 def crear_escena_portada(ruta_destino):
@@ -807,11 +681,17 @@ def crear_escena_portada(ruta_destino):
 
 def generar_imagenes(escenas, cabecera):
     rutas = []
-    base_seed = random.randint(1, 10_000_000)
     total = len(escenas)
-
+    
+    # Leemos todas las imágenes jpg de tu nueva carpeta
+    fondos_disponibles = glob.glob(os.path.join("fondos_base", "*.jpg"))
+    if not fondos_disponibles:
+        print("⚠️ No se encontraron imágenes en la carpeta 'fondos_base'.")
+    
     for i, esc in enumerate(escenas):
         ruta = os.path.join(CARPETA, f"img_{i}.jpg")
+        
+        # Detectamos si es la última escena o menciona la palabra "libro"
         es_escena_libro = (i == total - 1) or ("libro" in esc["texto"].lower())
 
         if es_escena_libro and crear_escena_portada(ruta):
@@ -819,14 +699,21 @@ def generar_imagenes(escenas, cabecera):
             rutas.append(ruta)
             continue
 
-        descripcion = esc.get("img") or f"{cabecera.lower()}, {esc['texto']}"
-        prompt = f"{descripcion}. {ESTILO_IMAGEN}"
-        print(f"🖼️ Generando imagen {i + 1}/{total}...", flush=True)
-        if not descargar_imagen_ia(prompt, ruta, base_seed + i):
+        print(f"🖼️ Asignando fondo aleatorio {i + 1}/{total}...", flush=True)
+        if fondos_disponibles:
+            # Elegimos un fondo al azar de tus imágenes pre-generadas
+            fondo_elegido = random.choice(fondos_disponibles)
+            
+            # Usamos la función a_vertical que ya tenías para asegurar que encaja a 1080x1920
+            img = Image.open(fondo_elegido)
+            a_vertical(img).save(ruta, "JPEG", quality=92)
+        else:
+            # Si por algún motivo falla, usa tu degradado oscuro de emergencia
             print("    ↪ Usando fondo de respaldo (degradado).")
-            crear_fondo_respaldo(ruta, base_seed + i)
+            crear_fondo_respaldo(ruta, random.randint(1, 10000))
+            
         rutas.append(ruta)
-        time.sleep(3)
+        
     return rutas
 
 
