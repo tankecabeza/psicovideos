@@ -1,1 +1,2 @@
 40. Sesgo de Confirmación
+33. Técnica BYAF
