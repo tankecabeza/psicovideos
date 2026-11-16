@@ -1,3 +1,4 @@
 40. Sesgo de Confirmación
 33. Técnica BYAF
 31. Ley de Reciprocidad
+34. Efecto de Arrastre
