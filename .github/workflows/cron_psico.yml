@@ -40,11 +40,12 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install -r requirements.txt
-          # Instalación base
           pip install "numpy<2" "moviepy==1.0.3" "Pillow<10" edge-tts requests google-api-python-client google-auth
-          # Forzamos la actualización de instagrapi para evitar errores heredados
+          # Actualizamos instagrapi para evitar errores heredados (p. ej. qe/expose)
           pip install -U instagrapi
-          pip show instagrapi | head -2
+          # Re-fijamos las versiones que necesita el script por si instagrapi las ha cambiado
+          pip install "numpy<2" "moviepy==1.0.3" "Pillow<10"
+          pip list 2>/dev/null | grep -i -E "instagrapi|moviepy|pillow|numpy"
 
       - name: Fabricar y enviar el vídeo
         env:
@@ -57,6 +58,9 @@ jobs:
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           LEONARDO_API_KEY: ${{ secrets.LEONARDO_API_KEY }}
+          # Opcionales: si no existen estos secretos, el script simplemente los ignora
+          LEONARDO_MODEL_ID: ${{ secrets.LEONARDO_MODEL_ID }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: python -u auto_psico_video.py
 
       - name: Commit and push historial
