@@ -4,6 +4,7 @@ import time
 import random
 import asyncio
 import urllib.parse
+import html
 import requests
 import json
 import numpy as np
@@ -12,6 +13,7 @@ import edge_tts
 from moviepy.editor import VideoClip, AudioFileClip
 
 from instagrapi import Client
+from instagrapi.types import StoryLink
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -23,12 +25,11 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 ARCHIVO_HISTORIAL = "historial_videos.txt"
 
-# Enlaces de promoción del libro (Gumroad directo + Acortador Bitly)
+# Enlaces de promoción del libro
 LINK_LIBRO = "https://tankecabeza.gumroad.com/l/arquitectura-mente/OFERTA"
 LINK_CORTO = "https://bit.ly/4AkPY0T"
 RUTA_PORTADA = "portada.jpg"
 
-# Estilo común para todas las imágenes generadas con IA
 ESTILO_IMAGEN = (
     "cinematic vertical photo, dramatic lighting, dark moody atmosphere, "
     "psychology and human behavior theme, highly detailed, sharp focus, "
@@ -36,27 +37,27 @@ ESTILO_IMAGEN = (
 )
 
 # ==============================================================================
-# MEGA BASE DE DATOS DE 50 GUIONES COMPLETOS
+# BASE DE DATOS DE GUIONES (Corregidos y respaldados científicamente)
 # ==============================================================================
 PACK_GUIONES = {
-    "1. Trucos contra manipuladores": {
-        "cabecera": "3 TRUCOS DE PSICOLOGÍA OSCURA",
-        "titulo_yt": "3 Trucos de Psicología Oscura para Dominar Cualquier Situación #Shorts #Psicologia",
+    "1. Defensa contra manipuladores": {
+        "cabecera": "3 TÉCNICAS DE DEFENSA MENTAL",
+        "titulo_yt": "3 Técnicas para Desarmar a Quien Intenta Intimidarte #Shorts #Psicologia",
         "escenas": [
-            {"texto": "Si alguien te falta al respeto en público, aplica este truco inmediatamente."},
-            {"texto": "Uno: mírale a los ojos en silencio durante cuatro segundos. Destruirás su seguridad."},
-            {"texto": "Dos: pregúntale con voz calmada si se encuentra bien. Quedará en evidencia frente a todos."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Si alguien te falta al respeto en público, prueba esta técnica de asertividad."},
+            {"texto": "Uno: mantén el contacto visual en silencio durante unos segundos. Romperás su inercia agresiva."},
+            {"texto": "Dos: pregúntale con voz calmada si se encuentra bien. Desplazarás la presión hacia su comportamiento."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
-    "2. Detectar mentiras FBI": {
-        "cabecera": "TÉCNICAS DEL FBI",
-        "titulo_yt": "Cómo Saber si te Mienten en 5 Segundos según el FBI #Shorts #Psicologia",
+    "2. Detectar mentiras": {
+        "cabecera": "PSICOLOGÍA DEL ENGAÑO",
+        "titulo_yt": "Cómo Detectar Incongruencias al Escuchar una Historia #Shorts #Psicologia",
         "escenas": [
-            {"texto": "Así descubres a un mentiroso en menos de cinco segundos según exagentes del FBI."},
-            {"texto": "Si repite exactamente tu pregunta antes de responder, está ganando tiempo para inventar."},
-            {"texto": "Pídele que cuente la historia en orden inverso. Los mentirosos siempre se bloquean."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Detectar mentiras no es magia, se basa en analizar la sobrecarga cognitiva."},
+            {"texto": "Si alguien repite tu pregunta antes de responder, podría estar ganando tiempo para elaborar el engaño."},
+            {"texto": "Pídele que cuente un detalle en orden inverso. Al requerir más esfuerzo mental, las historias falsas suelen desmoronarse."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "3. El Efecto Escasez": {
@@ -64,29 +65,29 @@ PACK_GUIONES = {
         "titulo_yt": "Por Qué Cuanto Más Das, Menos Te Valoran (Ley de Escasez) #Shorts #Psicologia",
         "escenas": [
             {"texto": "Deja de estar siempre disponible al instante para todo el mundo."},
-            {"texto": "El cerebro humano desprecia lo abundante y se obsesiona con lo escaso."},
-            {"texto": "Retira tu atención en silencio cuando no te valoren y empezarán a buscarte."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El cerebro humano tiende a normalizar lo abundante y a valorar más lo escaso."},
+            {"texto": "Proteger tu tiempo y tu atención es el primer paso para que los demás también los respeten."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "4. Triangulación Visual": {
         "cabecera": "EL TRUCO DE LA MIRADA",
-        "titulo_yt": "El Truco Visual para Seducir o Intimidar en Segundos #Shorts #LenguajeCorporal",
+        "titulo_yt": "El Truco Visual para Mostrar Seguridad al Hablar #Shorts #LenguajeCorporal",
         "escenas": [
-            {"texto": "Usa la mirada triangular para controlar lo que otra persona siente al hablar contigo."},
-            {"texto": "Para generar atracción: mira a su ojo izquierdo, luego al derecho y baja a sus labios."},
-            {"texto": "Para imponer respeto: mira a sus ojos y sube al centro de su frente. Desactivará su ego."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El triángulo visual que formas con tus ojos determina el tono de la conversación."},
+            {"texto": "Una mirada social recorre los ojos y la boca, generando cercanía e interés."},
+            {"texto": "Pero si quieres proyectar autoridad, mantén la mirada en el triángulo entre sus ojos y su frente."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "5. El Efecto Halo": {
         "cabecera": "EL SESGO DE LA BELLEZA",
         "titulo_yt": "Por Qué la Gente Atractiva lo Tiene Más Fácil (Efecto Halo) #Shorts #Curiosidades",
         "escenas": [
-            {"texto": "El efecto Halo es el sesgo inconsciente más poderoso de la mente humana."},
-            {"texto": "En solo medio segundo, tu cerebro asume que alguien bien vestido es más honesto y capaz."},
-            {"texto": "Incluso en los tribunales, los acusados con buena presencia reciben penas un veinte por ciento menores."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El efecto Halo es uno de los sesgos cognitivos más potentes de la mente humana."},
+            {"texto": "Nuestra mente asume que si alguien tiene un rasgo positivo, como ser atractivo, también será más honesto o capaz."},
+            {"texto": "Incluso en los tribunales, los acusados con buena presencia tienden a recibir juicios más favorables."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "6. Gaslighting Sutil": {
@@ -96,7 +97,7 @@ PACK_GUIONES = {
             {"texto": "El luz de gas o gaslighting es la técnica de manipulación más destructiva que existe."},
             {"texto": "Si te repiten frases como: estás loco, eres demasiado sensible o eso nunca pasó..."},
             {"texto": "Están reescribiendo tu memoria poco a poco para que dependas de su versión de la realidad."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "7. Efecto Zeigarnik": {
@@ -104,439 +105,439 @@ PACK_GUIONES = {
         "titulo_yt": "El Truco Psicológico para que Alguien No Pueda Olvidarte #Shorts #Psicologia",
         "escenas": [
             {"texto": "Si quieres que alguien no deje de pensar en ti, aplica el Efecto Zeigarnik."},
-            {"texto": "Nuestra mente borra lo que ya ha terminado, pero se queda atrapada en lo que queda a medias."},
-            {"texto": "Termina la conversación en su punto más alto y su cerebro te recordará todo el día."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Nuestra mente archiva lo que ya ha terminado, pero se queda procesando lo que queda a medias."},
+            {"texto": "Termina la conversación en un punto alto y su cerebro tenderá a recordarte más tiempo."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "8. Los pies no mienten": {
         "cabecera": "LENGUAJE CORPORAL OCULTO",
         "titulo_yt": "Lo que Sus Pies Revelan de Sus Intenciones Ocultas #Shorts #LenguajeCorporal",
         "escenas": [
-            {"texto": "El rostro humano está entrenado para fingir, pero los pies siempre dicen la verdad."},
-            {"texto": "Si hablas con alguien y sus pies apuntan hacia la puerta, quiere irse aunque te sonría."},
-            {"texto": "Si cruza los tobillos debajo de la silla en una negociación, está ocultando información."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Estamos entrenados para controlar la expresión del rostro, pero solemos olvidar los pies."},
+            {"texto": "Si hablas con alguien y sus pies apuntan hacia la puerta, es probable que desee marcharse."},
+            {"texto": "Es una respuesta instintiva del sistema nervioso para prepararnos para la acción o la huida."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "9. Paradoja de la Elección": {
         "cabecera": "POR QUÉ DUDAS TANTO",
         "titulo_yt": "La Regla de 3 para Tomar Decisiones sin Estrés #Shorts #DesarrolloPersonal",
         "escenas": [
-            {"texto": "Tener demasiadas opciones no te hace más libre, te hace más infeliz."},
-            {"texto": "Se llama Paradoja de la Elección: a partir de cinco alternativas, tu cerebro entra en fatiga."},
-            {"texto": "Para decidir como un estratega, descarta todo rápido y quédate solo con tres caminos."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Tener demasiadas opciones no te hace más libre, te genera fatiga decisional."},
+            {"texto": "Se llama Paradoja de la Elección: cuantas más alternativas, más ansiedad por miedo a equivocarnos."},
+            {"texto": "Para decidir de forma eficiente, descarta lo irrelevante y quédate solo con tres opciones finales."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "10. Técnica del Espejo": {
         "cabecera": "EL HACK DE LA EMPATÍA",
-        "titulo_yt": "Cómo Caerle Bien a Cualquier Persona en 10 Segundos #Shorts #Persuasion",
+        "titulo_yt": "Cómo Conectar Rápido con Cualquier Persona #Shorts #Persuasion",
         "escenas": [
-            {"texto": "¿Quieres ganarte la confianza de un desconocido en menos de un minuto?"},
-            {"texto": "Imita con dos segundos de retraso su postura, la velocidad al hablar y sus gestos."},
-            {"texto": "Sus neuronas espejo se activarán y sentirá una conexión inexplicable contigo."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "¿Quieres generar confianza con un desconocido de forma natural?"},
+            {"texto": "Sincroniza sutilmente tu lenguaje corporal, igualando su tono de voz o postura."},
+            {"texto": "Este reflejo activa las neuronas espejo y fomenta una sensación inconsciente de familiaridad."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "11. El Efecto Franklin": {
         "cabecera": "CONVIERTE ENEMIGOS EN ALIADOS",
-        "titulo_yt": "El Efecto Ben Franklin: Cómo Hacer que un Enemigo te Aprecie #Shorts #Psicologia",
+        "titulo_yt": "El Efecto Ben Franklin: Cómo Hacer que te Aprecien Más #Shorts #Psicologia",
         "escenas": [
-            {"texto": "Si alguien te tiene manía sin motivo, no intentes hacerle un favor. Pídeselo tú a él."},
-            {"texto": "Pídele algo minúsculo, como que te preste un bolígrafo o te dé un consejo rápido."},
-            {"texto": "Su cerebro resolverá la disonancia cognitiva convenciéndose de que en realidad le caes bien."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Si quieres mejorar la relación con alguien distante, no le hagas un favor. Pídeselo tú a él."},
+            {"texto": "Pídele algo minúsculo, como que te preste un bolígrafo o te dé una opinión."},
+            {"texto": "Por disonancia cognitiva, su cerebro justificará la ayuda asumiendo que en el fondo le caes bien."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "12. El Anclaje en Negociación": {
         "cabecera": "PSICOLOGÍA DEL DINERO",
         "titulo_yt": "El Truco del Anclaje que Usan los Negociadores Expertos #Shorts #Negocios",
         "escenas": [
-            {"texto": "En cualquier negociación, la primera cifra que se dice en voz alta gana la partida."},
-            {"texto": "Se llama Sesgo de Anclaje: el cerebro usa el primer número como referencia absoluta."},
-            {"texto": "Si pides primero algo elevado, la contraoferta siempre será mucho más alta de lo normal."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "En cualquier negociación, la primera cifra que se dice condiciona todo el proceso."},
+            {"texto": "Se llama Sesgo de Anclaje: el cerebro usa ese primer dato como punto de referencia absoluto."},
+            {"texto": "Establecer la cifra inicial te da el control de las expectativas de la otra parte."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "13. El Efecto Pratfall": {
         "cabecera": "EL PODER DE LA IMPERFECCIÓN",
-        "titulo_yt": "Por Qué Ser Demasiado Perfecto Hace que la Gente Desconfíe #Shorts #Psicologia",
+        "titulo_yt": "Por Qué Ser Demasiado Perfecto Genera Desconfianza #Shorts #Psicologia",
         "escenas": [
-            {"texto": "Intentar parecer perfecto todo el tiempo genera rechazo y envidia en los demás."},
-            {"texto": "Según la psicología, cometer un pequeño error torpe en público dispara tu carisma."},
-            {"texto": "Se llama Efecto Pratfall: muestras humanidad y haces que los demás se sื่น cómodos."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Intentar parecer infalible todo el tiempo suele generar distancia emocional con los demás."},
+            {"texto": "La psicología muestra que admitir un pequeño error nos hace parecer más humanos y accesibles."},
+            {"texto": "Se llama Efecto Pratfall: mostrar vulnerabilidad hace que los demás se sientan cómodos a tu lado."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "14. Bombardeo de Amor": {
         "cabecera": "LA TRAMPA NARCISISTA",
         "titulo_yt": "Qué es el Love Bombing y Cómo Detectarlo a Tiempo #Shorts #Relaciones",
         "escenas": [
-            {"texto": "Desconfía de quien te promete amor eterno y te llena de regalos en la primera semana."},
-            {"texto": "Los perfiles narcisistas usan el bombardeo de afecto para crear adicción a su validación."},
-            {"texto": "En cuanto estés enganchado, retirarán todo el cariño de golpe para tener el control."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Presta atención si alguien te promete amor eterno y devoción absoluta en la primera semana."},
+            {"texto": "Muchos perfiles manipuladores usan el bombardeo de afecto para crear dependencia rápida."},
+            {"texto": "Una vez forjado el vínculo, el afecto desaparece para dar paso al control y la exigencia."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "15. La Regla de los 3 Segundos": {
         "cabecera": "DOMINA EL CARISMA",
         "titulo_yt": "La Pausa de 3 Segundos que usan los Líderes Más Carismáticos #Shorts #Liderazgo",
         "escenas": [
-            {"texto": "Las personas más respetadas nunca responden al instante cuando les hacen una pregunta."},
-            {"texto": "Hacen una pausa de dos a tres segundos mirando al interlocutor antes de hablar."},
-            {"texto": "Ese breve silencio demuestra calma absoluta y hace que cada palabra parezca oro."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Las personas más respetadas evitan reaccionar impulsivamente a las preguntas difíciles."},
+            {"texto": "Hacen una pausa de dos o tres segundos, respiran y mantienen el contacto visual."},
+            {"texto": "Ese breve silencio demuestra autocontrol y dota de mayor peso a sus palabras."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "16. Psicología del Color Rojo": {
         "cabecera": "PSICOLOGÍA DEL COLOR",
-        "titulo_yt": "Cómo los Colores que Vistes Manipulan a Quienes te Rodean #Shorts #Curiosidades",
+        "titulo_yt": "Cómo los Colores que Vistes Afectan tu Percepción #Shorts #Curiosidades",
         "escenas": [
-            {"texto": "El color que llevas puesto altera el pulso cardíaco de las personas que te miran."},
-            {"texto": "El azul marino proyecta autoridad y lealtad; por eso se usa en juicios y bancos."},
-            {"texto": "El negro impone distancia y poder, mientras que el rojo activa la urgencia y atracción."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El color que vistes tiene un impacto sutil pero real en cómo te perciben los demás."},
+            {"texto": "El azul oscuro proyecta estabilidad y rigor profesional, ideal para entornos formales."},
+            {"texto": "El rojo, en cambio, está asociado evolutivamente a la dominancia, el dinamismo y la atracción."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "17. El Efecto Pigmalión": {
         "cabecera": "LA PROFECÍA AUTOCUMPLIDA",
         "titulo_yt": "Cómo las Expectativas de los Demás Cambian tu Rendimiento #Shorts #Motivacion",
         "escenas": [
-            {"texto": "Trata a un hombre como lo que es y seguirá igual; trátalo como puede llegar a ser y se transformará."},
-            {"texto": "El Efecto Pigmalión demuestra que rendimos según lo que creemos que esperan de nosotros."},
-            {"texto": "Aléjate de quienes dudan de tu capacidad, porque tu subconsciente absorberá sus límites."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Las personas tienden a rendir al nivel de las expectativas que se tienen sobre ellas."},
+            {"texto": "El Efecto Pigmalión demuestra que creer en la capacidad de alguien mejora sus resultados reales."},
+            {"texto": "Rodéate de personas que confíen en ti, porque tu entorno modela tus propios límites."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "18. La Técnica del Disco Rayado": {
         "cabecera": "CÓMO DECIR QUE NO",
         "titulo_yt": "La Técnica Psicológica para Decir 'No' sin Sentirte Culpable #Shorts #Psicologia",
         "escenas": [
-            {"texto": "Cuando dices que no, el error más grave que puedes cometer es dar excusas largas."},
-            {"texto": "Un manipulador usará tus propias excusas como puntos débiles para seguir insistiendo."},
-            {"texto": "Repite la misma frase corta y tranquila una y otra vez. Se quedarán sin munición."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Cuando necesites establecer un límite, evita dar excusas largas y detalladas."},
+            {"texto": "Un interlocutor insistente usará esas excusas para intentar convencerte de lo contrario."},
+            {"texto": "Usa la técnica del disco rayado: repite tu negativa de forma breve, amable y firme."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "19. El Efecto Dunning-Kruger": {
         "cabecera": "LA PARADOJA DE LA IGNORANCIA",
-        "titulo_yt": "Por Qué los Más Ignorantes son los Más Ruidosos #Shorts #Psicologia",
+        "titulo_yt": "Por Qué Quien Menos Sabe Suele Ser Quien Más Habla #Shorts #Psicologia",
         "escenas": [
-            {"texto": "Cuanto menos sabe una persona sobre un tema, más segura está de tener toda la razón."},
-            {"texto": "Se conoce como efecto Dunning-Kruger: la ignorancia da una confianza ciega."},
-            {"texto": "Por el contrario, las mentes más brillantes suelen dudar porque conocen la complejidad real."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Las personas con menos habilidades en un área tienden a sobreestimar su capacidad real."},
+            {"texto": "Se conoce como efecto Dunning-Kruger: la falta de conocimientos impide ver los propios errores."},
+            {"texto": "Por el contrario, los verdaderos expertos suelen dudar más, porque conocen la complejidad del tema."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "20. Microexpresión de Desprecio": {
         "cabecera": "LA SEÑAL MÁS PELIGROSA",
-        "titulo_yt": "El Gesto de 1 Segundo que Delata a un Falso Amigo #Shorts #LenguajeCorporal",
+        "titulo_yt": "El Gesto que Puede Delatar Superioridad o Desprecio #Shorts #LenguajeCorporal",
         "escenas": [
-            {"texto": "Existe un gesto facial que dura menos de medio segundo y predice la traición."},
-            {"texto": "Si al contar un logro tuyo, alguien levanta solo una comisura de los labios..."},
-            {"texto": "Es la microexpresión universal del desprecio y la envidia. Nunca falla."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Las emociones verdaderas a veces escapan en gestos faciales que duran fracciones de segundo."},
+            {"texto": "Si al contar un logro, alguien eleva solo una comisura de los labios de forma asimétrica..."},
+            {"texto": "Suele ser la microexpresión universal del desprecio o la superioridad moral. Obsérvalo con atención."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "21. Ley de Parkinson": {
         "cabecera": "HACKEA TU PRODUCTIVIDAD",
         "titulo_yt": "Por Qué Postergas Todo hasta el Último Minuto (Ley de Parkinson) #Shorts",
         "escenas": [
-            {"texto": "Si te das una semana para hacer un trabajo de dos horas, tardarás exactamente una semana."},
-            {"texto": "La Ley de Parkinson dicta que el trabajo se expande hasta ocupar todo el tiempo disponible."},
-            {"texto": "Ponte plazos artificialmente cortos y verás cómo tu enfoque se multiplica por diez."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Si te das una semana para hacer un trabajo de dos horas, probablemente tardes toda la semana."},
+            {"texto": "La Ley de Parkinson sostiene que el trabajo se expande hasta agotar el tiempo disponible."},
+            {"texto": "Acortar tus plazos de entrega de forma artificial es clave para multiplicar tu concentración."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "22. La Mirada al Mentón": {
         "cabecera": "PSICOLOGÍA DEL LIDERAZGO",
-        "titulo_yt": "Qué Pasa Cuando Subes el Mentón 2 Centímetros al Hablar #Shorts #Carisma",
+        "titulo_yt": "Cómo Proyectar Seguridad Controlando tu Postura Cervical #Shorts #Carisma",
         "escenas": [
-            {"texto": "En situaciones de tensión, tu cuello revela instantáneamente tu rango en el grupo."},
-            {"texto": "Cuando tenemos miedo, bajamos la barbilla por instinto para proteger la garganta."},
-            {"texto": "Mantener el mentón ligeramente elevado envía una señal biológica de calma y liderazgo."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "En situaciones de tensión social, la postura del cuello revela tu nivel de comodidad."},
+            {"texto": "Cuando nos sentimos amenazados, tendemos a bajar la barbilla instintivamente para protegernos."},
+            {"texto": "Mantener el mentón paralelo al suelo transmite calma, aplomo y seguridad en uno mismo."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "23. El Sesgo del Costo Hundido": {
         "cabecera": "LA TRAMPA DE NO SOLTAR",
         "titulo_yt": "El Error Psicológico que te Mantiene en Malas Decisiones #Shorts #Psicologia",
         "escenas": [
-            {"texto": "¿Por qué nos cuesta tanto abandonar un mal negocio o una relación que ya no funciona?"},
-            {"texto": "Tu cerebro odia admitir que el tiempo y esfuerzo que ya invertiste se han perdido."},
-            {"texto": "Los grandes estrategas no miran lo que ya costó, solo evalúan lo que les costará seguir ahí."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "¿Por qué nos cuesta tanto abandonar un proyecto o relación que claramente ya no funciona?"},
+            {"texto": "Es el Sesgo del Costo Hundido: nos duele asumir que el tiempo y esfuerzo invertidos no volverán."},
+            {"texto": "La clave está en tomar decisiones basadas en el futuro, no en lo que ya has gastado en el pasado."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "24. El Secreto de los Cuentos": {
         "cabecera": "EL PODER DE LAS HISTORIAS",
         "titulo_yt": "Por Qué una Buena Historia Convence Más que Mil Datos #Shorts #Persuasion",
         "escenas": [
-            {"texto": "Cuando das datos fríos, el cerebro de quien te escucha activa sus barreras críticas."},
-            {"texto": "Pero cuando cuentas una historia, su mente baja la guardia y libera oxitocina."},
-            {"texto": "Quien domina el arte de contar historias, domina las emociones de los demás."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Cuando presentamos datos fríos, el cerebro del oyente activa sus filtros críticos y analíticos."},
+            {"texto": "Pero una buena narrativa envuelve el mensaje en emoción, facilitando la retención del mensaje."},
+            {"texto": "Quien sabe estructurar la información en forma de historia, domina el arte de la comunicación."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "25. Técnica de la Confusión": {
-        "cabecera": "CÓMO GANAR DISCUSIONES",
-        "titulo_yt": "La Técnica Psicológica para Desarmar a Alguien que te Grita #Shorts #Psicologia",
+        "cabecera": "CÓMO FRENAR DISCUSIONES",
+        "titulo_yt": "La Técnica para Desarmar la Agresividad Verbal #Shorts #Psicologia",
         "escenas": [
-            {"texto": "Si alguien te está gritando o atacando verbalmente, no te defiendas."},
-            {"texto": "Míralo fijamente a la frente y haz una pregunta totalmente fuera de contexto."},
-            {"texto": "Pregunta algo como: ¿Llevas los zapatos desatados? Su cerebro se reiniciará por la confusión."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Si alguien te alza la voz de forma irracional, entrar en su juego solo escalará el conflicto."},
+            {"texto": "Prueba a romper su patrón introduciendo una frase completamente fuera de contexto."},
+            {"texto": "El cerebro agresor debe detenerse a procesar la anomalía, lo que a menudo desinfla la tensión inicial."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "26. Ilusión de Alternativa": {
-        "cabecera": "MANIPULACIÓN INVISIBLE",
-        "titulo_yt": "El Truco para que Siempre Hagan lo que Tú Quieres #Shorts #Persuasion",
+        "cabecera": "DEFENSA CONTRA VENTAS",
+        "titulo_yt": "Cómo Detectar Cuándo te Están Forzando a Elegir #Shorts #Persuasion",
         "escenas": [
-            {"texto": "Nunca preguntes a alguien si quiere hacer algo, dale dos opciones que te beneficien a ti."},
-            {"texto": "En lugar de decir: ¿Nos vemos hoy?, di: ¿Prefieres vernos a las cinco o a las seis?"},
-            {"texto": "Su cerebro elegirá la opción más cómoda, olvidando que podía haber dicho que no."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "En persuasión comercial, rara vez te preguntan si quieres hacer algo. Te dan a elegir el cómo."},
+            {"texto": "Por ejemplo: ¿Prefieres que te enviemos el producto el martes o el jueves?"},
+            {"texto": "Es la ilusión de alternativa: limitan tus opciones para que olvides que podías simplemente decir que no."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "27. Refuerzo Intermitente": {
         "cabecera": "LA TRAMPA TÓXICA",
         "titulo_yt": "Por Qué te Obsesionas con Quien te Ignora #Shorts #Relaciones",
         "escenas": [
-            {"texto": "El refuerzo intermitente es la misma técnica que usan las máquinas tragaperras para crear adicción."},
-            {"texto": "Si alguien te da mucha atención un día y te ignora al siguiente, tu cerebro libera dopamina por la incertidumbre."},
-            {"texto": "Terminas obsesionándote no por amor, sino por adicción química a su validación."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El refuerzo intermitente es el mismo mecanismo que genera adicción en los juegos de azar."},
+            {"texto": "Si alguien te da validación intensa un día y frialdad al siguiente, tu cerebro entra en alerta."},
+            {"texto": "Esa montaña rusa de incertidumbre segrega dopamina y puede confundirse erróneamente con amor intenso."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "28. Efecto Espectador": {
         "cabecera": "PSICOLOGÍA SOCIAL",
         "titulo_yt": "Si Estás en Peligro, NUNCA Pidas Ayuda Así #Shorts #Supervivencia",
         "escenas": [
-            {"texto": "Si tienes una emergencia en la calle, no grites pidiendo ayuda al aire."},
-            {"texto": "Por el Efecto Espectador, todos pensarán que alguien más intervendrá y nadie hará nada."},
-            {"texto": "Señala a una persona específica y dale una orden: Tú, el de la chaqueta azul, llama a emergencias."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "En una emergencia rodeado de gente, pedir ayuda al aire puede ser contraproducente."},
+            {"texto": "El Efecto Espectador hace que la responsabilidad se diluya: todos asumen que actuará otro."},
+            {"texto": "Para romper este bloqueo, señala a una persona concreta: Tú, el de la camisa roja, llama a emergencias."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "29. El Toque de Midas": {
         "cabecera": "HACK DE CONFIANZA",
-        "titulo_yt": "El Contacto Físico de 1 Segundo que Multiplica tu Carisma #Shorts #LenguajeCorporal",
+        "titulo_yt": "Cómo el Contacto Físico Sutil Mejora la Receptividad #Shorts #LenguajeCorporal",
         "escenas": [
-            {"texto": "Un roce de un segundo en el antebrazo de la otra persona aumenta la confianza en un sesenta por ciento."},
-            {"texto": "La psicología lo llama el Toque de Midas. Humaniza la interacción instantáneamente."},
-            {"texto": "Úsalo al pedir un favor o cerrar un trato, pero siempre de forma muy sutil y rápida."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Un roce de apenas un segundo en el antebrazo puede aumentar significativamente la receptividad de alguien."},
+            {"texto": "En sociología se conoce como el Toque de Midas. Subraya la conexión y humaniza la interacción."},
+            {"texto": "Suele funcionar mejor en contextos cordiales y de servicio, siempre respetando el espacio personal."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "30. Efecto Forer": {
         "cabecera": "POR QUÉ CREES EN HORÓSCOPOS",
         "titulo_yt": "El Truco Psicológico detrás de los Videntes y Horóscopos #Shorts #Curiosidades",
         "escenas": [
-            {"texto": "El Efecto Forer explica por qué crees que tu horóscopo siempre acierta."},
-            {"texto": "Aceptamos descripciones vagas y generales como si fueran personalizadas solo para nosotros."},
-            {"texto": "Si te dicen: 'A veces eres sociable, pero otras necesitas tu espacio', creerás que te están leyendo la mente."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El Efecto Forer explica por qué es tan fácil identificarse con textos de astrología o tarot."},
+            {"texto": "Nuestro cerebro procesa descripciones genéricas y vagas como si fueran altamente personalizadas."},
+            {"texto": "Si te dicen: 'A veces necesitas tu espacio, pero valoras a tus amigos', asumirás que te están leyendo la mente."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "31. Ley de Reciprocidad": {
-        "cabecera": "CÓMO CONSEGUIR FAVORES",
-        "titulo_yt": "El Truco para que Alguien Sienta que te Debe un Favor #Shorts #Persuasion",
+        "cabecera": "NORMAS SOCIALES INVISIBLES",
+        "titulo_yt": "Por Qué Sentimos la Obligación de Devolver Favores #Shorts #Persuasion",
         "escenas": [
-            {"texto": "Si quieres que alguien haga algo por ti, hazle tú un pequeño favor no solicitado primero."},
-            {"texto": "La neurociencia demuestra que el ser humano odia estar en deuda social con otros."},
-            {"texto": "Sentirá una presión psicológica inmensa por devolverte el favor cuando se lo pidas."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Cuando alguien hace algo por nosotros, incluso sin pedirlo, sentimos una fuerte deuda social."},
+            {"texto": "La norma de reciprocidad es un pilar de la cooperación humana desde la prehistoria."},
+            {"texto": "Es el motivo por el que en marketing te ofrecen muestras gratuitas: predisponen tu voluntad de compra."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "32. Triángulo de Karpman": {
-        "cabecera": "PERSONAS TÓXICAS",
-        "titulo_yt": "Aléjate de Quien Juega a ser la Víctima (Triángulo Dramático) #Shorts",
+        "cabecera": "DINÁMICAS TÓXICAS",
+        "titulo_yt": "Aléjate de Quien Siempre Juega a ser la Víctima #Shorts",
         "escenas": [
-            {"texto": "Cuidado con las personas que siempre se quejan de que el mundo está contra ellos."},
-            {"texto": "Te arrastrarán a jugar el papel de Salvador para que les resuelvas la vida."},
-            {"texto": "En cuanto dejes de complacerles, te convertirán en el Perseguidor y el malo de su historia."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El Triángulo Dramático de Karpman describe el ciclo de las relaciones conflictivas crónicas."},
+            {"texto": "Alguien adopta el rol de Víctima para forzarte a ser su Salvador constante."},
+            {"texto": "Pero en cuanto intentes poner límites o dejes de ceder, te convertirán inmediatamente en su Perseguidor."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "33. Técnica BYAF": {
-        "cabecera": "TRIPLICA TUS VENTAS",
-        "titulo_yt": "Usa estas 5 Palabras para Triplicar tus Posibilidades de un SÍ #Shorts",
+        "cabecera": "REDUCE LA RESISTENCIA",
+        "titulo_yt": "Usa estas Palabras para Facilitar que te Digan que SÍ #Shorts",
         "escenas": [
-            {"texto": "Existe una técnica psicológica que duplica la probabilidad de que te digan que sí."},
-            {"texto": "Se llama BYAF por sus siglas en inglés: Pero Eres Libre De Elegir."},
-            {"texto": "Al recordarle a la persona que tiene total libertad, reduces su mecanismo de defensa a cero."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Para que alguien acepte una propuesta, el primer paso es desactivar su reactancia defensiva."},
+            {"texto": "La técnica BYAF consiste en añadir: Pero Eres Libre De Elegir, al final de tu petición."},
+            {"texto": "Al devolverle verbalmente el control de la decisión, paradójicamente incrementas las probabilidades de éxito."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "34. Efecto de Arrastre": {
         "cabecera": "MANIPULACIÓN DE MASAS",
-        "titulo_yt": "Por Qué Haces Cosas que No Quieres Solo Porque Otros lo Hacen #Shorts",
+        "titulo_yt": "Por Qué Haces Cosas Solo Porque la Mayoría lo Hace #Shorts",
         "escenas": [
-            {"texto": "Tu cerebro está programado biológicamente para encajar en la tribu."},
-            {"texto": "El Efecto de Arrastre hace que ignores tu propia lógica si ves a la mayoría haciendo otra cosa."},
-            {"texto": "Es el sesgo exacto que usan las marcas para poner 'El más vendido' y que compres sin pensar."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Nuestro cerebro evolucionó para buscar la seguridad del grupo y evitar el aislamiento social."},
+            {"texto": "El Efecto Bandwagon hace que a menudo ignoremos nuestra propia lógica para seguir a la masa."},
+            {"texto": "Es el mecanismo exacto que usan las marcas al poner la etiqueta de 'El más vendido' en sus productos."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
-    "35. Falso Reflejo Pupilar": {
-        "cabecera": "LENGUAJE DE LA ATRACCIÓN",
-        "titulo_yt": "Cómo Saber si le Gustas a Alguien Mirando sus Pupilas #Shorts #Amor",
+    "35. El Lenguaje de las Pupilas": {
+        "cabecera": "SEÑALES INVOLUNTARIAS",
+        "titulo_yt": "Lo que la Dilatación Pupilar Revela Sobre el Interés #Shorts #Amor",
         "escenas": [
-            {"texto": "Cuando miramos algo o a alguien que nos resulta muy atractivo, nuestras pupilas se dilatan."},
-            {"texto": "Es una respuesta del sistema nervioso autónomo imposible de falsificar."},
-            {"texto": "Si sus ojos se ven más oscuros y grandes al mirarte en un lugar iluminado, le gustas."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Aunque la luz ambiental es el factor principal, las pupilas también responden a las emociones."},
+            {"texto": "Ante estímulos que nos resultan muy atractivos o estimulantes, el sistema nervioso autónomo las dilata."},
+            {"texto": "Una midriasis sutil durante una conversación relajada puede ser un indicador no verbal de interés genuino."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
-    "36. Postura de Poder": {
+    "36. Posturas Expansivas": {
         "cabecera": "HACKEA TU CEREBRO",
-        "titulo_yt": "Haz esta Postura 2 Minutos para Eliminar el Miedo #Shorts #Confianza",
+        "titulo_yt": "Cómo tu Postura Corporal Cambia tu Sensación de Confianza #Shorts #Confianza",
         "escenas": [
-            {"texto": "Tu cuerpo no solo refleja cómo te sientes, también puede cambiar tus hormonas."},
-            {"texto": "Párate con los brazos en jarra y las piernas separadas durante dos minutos."},
-            {"texto": "Esta postura reduce el cortisol, la hormona del estrés, y dispara tu nivel de testosterona."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "La conexión mente-cuerpo funciona en ambas direcciones. Tu postura no solo refleja, también moldea tu actitud."},
+            {"texto": "Adoptar posturas expansivas y erguidas antes de un evento tenso mejora la autopercepción de competencia."},
+            {"texto": "Ocupar espacio físico envía señales de preparación a tu cerebro, reduciendo la sensación de vulnerabilidad."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "37. El Pie en la Puerta": {
         "cabecera": "TÉCNICA DE PERSUASIÓN",
-        "titulo_yt": "Cómo Lograr que Alguien te Diga que SÍ a un Gran Favor #Shorts",
+        "titulo_yt": "Cómo Lograr Aceptación Usando el Compromiso Progresivo #Shorts",
         "escenas": [
-            {"texto": "Nunca pidas un favor enorme de entrada porque activas las defensas de la otra persona."},
-            {"texto": "Pide primero un favor diminuto que sea imposible de rechazar."},
-            {"texto": "Una vez que hayan aceptado lo pequeño, su cerebro se compromete y aceptará el favor grande."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Pedir un favor enorme de entrada suele activar las defensas y generar rechazo inmediato."},
+            {"texto": "La estrategia del Pie en la Puerta sugiere empezar pidiendo algo minúsculo y fácil de aceptar."},
+            {"texto": "Una vez la persona ha accedido a lo pequeño, su necesidad de ser coherente facilita que acepte el favor grande."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "38. Efecto Spotlight": {
         "cabecera": "ANSIEDAD SOCIAL",
-        "titulo_yt": "Por Qué Crees que Todos te Miran (Y Por Qué es Mentira) #Shorts #Ansiedad",
+        "titulo_yt": "Por Qué Crees que Todos te Miran (Y Por Qué es Falso) #Shorts #Ansiedad",
         "escenas": [
-            {"texto": "¿Sientes que todos te juzgan cuando entras a un sitio o cometes un pequeño error?"},
-            {"texto": "Es el Efecto Spotlight. Tu cerebro magnifica cuánta atención te prestan los demás."},
-            {"texto": "La realidad es que el noventa por ciento de la gente está demasiado preocupada por sí misma."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "¿Sientes que todos juzgan tu forma de vestir o ese pequeño error que cometiste en público?"},
+            {"texto": "Es el Efecto Spotlight. Nuestro egocentrismo natural magnifica cuánta atención nos prestan los demás."},
+            {"texto": "La realidad es liberadora: la inmensa mayoría de la gente está demasiado ocupada pensando en sí misma."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "39. Paradoja de Abilene": {
         "cabecera": "DINÁMICAS DE GRUPO",
-        "titulo_yt": "Por Qué los Grupos Toman Decisiones Estúpidas #Shorts #PsicologiaSocial",
+        "titulo_yt": "Por Qué los Grupos Toman Decisiones que Nadie Quería #Shorts #PsicologiaSocial",
         "escenas": [
-            {"texto": "A veces un grupo de personas hace un plan que en realidad ninguno de ellos quería hacer."},
-            {"texto": "Se llama Paradoja de Abilene. Ocurre porque todos creen que los demás quieren hacerlo y callan."},
-            {"texto": "No tengas miedo a ser el único en decir que no. Probablemente muchos piensen como tú."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "A veces un grupo ejecuta un plan que, individualmente, ninguno de sus miembros deseaba hacer."},
+            {"texto": "Es la Paradoja de Abilene: sucede porque todos creen erróneamente que los demás sí están de acuerdo y prefieren callar."},
+            {"texto": "Romper el silencio asertivamente a menudo revela que muchos otros compartían tu misma opinión."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "40. Sesgo de Confirmación": {
         "cabecera": "EL ENGAÑO DE LA MENTE",
-        "titulo_yt": "Por Qué Discutir con un Fanático es Perder el Tiempo #Shorts #Psicologia",
+        "titulo_yt": "Por Qué Argumentar con Datos Fríos Rara Vez Funciona #Shorts #Psicologia",
         "escenas": [
-            {"texto": "Es biológicamente imposible convencer con datos lógicos a alguien radicalizado."},
-            {"texto": "El sesgo de confirmación hace que su cerebro solo procese la información que le da la razón."},
-            {"texto": "Cualquier prueba en contra la ignorarán o la usarán para enfadarse aún más."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Es casi imposible cambiar las creencias arraigadas de alguien usando únicamente la lógica pura."},
+            {"texto": "El sesgo de confirmación hace que filtremos los datos para procesar solo aquellos que nos dan la razón."},
+            {"texto": "Ante la evidencia en contra, muchas personas se atrincheran aún más en su postura original."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "41. Principio de Contraste": {
         "cabecera": "TRAMPAS DE VENTAS",
-        "titulo_yt": "El Truco que Usan las Tiendas para que Gastes Más Dinero #Shorts",
+        "titulo_yt": "El Sesgo Perceptivo que Usan para que Gastes Más #Shorts",
         "escenas": [
-            {"texto": "Si compras un traje caro, el vendedor siempre te ofrecerá la corbata después, nunca antes."},
-            {"texto": "Por el Principio de Contraste, el cerebro ve cincuenta dólares como poco dinero tras gastar quinientos."},
-            {"texto": "Hackean tu percepción matemática manipulando el orden en que te presentan los precios."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Si compras un artículo costoso, el vendedor hábil siempre te ofrecerá los accesorios complementarios justo después."},
+            {"texto": "Debido al Principio de Contraste, el cerebro percibe cincuenta euros como una cifra menor si acaba de gastar mil."},
+            {"texto": "Hackean tu percepción alterando el orden en que evalúas el impacto económico."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "42. Efecto de Mera Exposición": {
-        "cabecera": "EL SECRETO DE LA ATRACCIÓN",
-        "titulo_yt": "Cómo Hacer que Alguien se Enamore de ti por Repetición #Shorts #Amor",
+        "cabecera": "EL SECRETO DE LA FAMILIARIDAD",
+        "titulo_yt": "Por Qué el Roce y la Repetición Generan Atracción #Shorts #Amor",
         "escenas": [
-            {"texto": "Cuanto más vemos una cara, más atractiva y confiable nos empieza a parecer."},
-            {"texto": "Se llama Efecto de Mera Exposición. Es la razón por la que la publicidad repite los anuncios."},
-            {"texto": "Aparecer de forma constante y sutil en la vida de alguien dispara su afinidad hacia ti."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Cuanto más expuestos estamos a un rostro, un sonido o una idea, más favorable nos suele parecer."},
+            {"texto": "Es el Efecto de Mera Exposición, un pilar fundamental en la psicología de la publicidad y la afinidad social."},
+            {"texto": "Aparecer de forma constante y amigable genera una preferencia inconsciente basada puramente en la familiaridad."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "43. Condicionamiento Clásico": {
         "cabecera": "CREA ANCLAJES EMOCIONALES",
-        "titulo_yt": "Cómo Hackear el Cerebro de Alguien Usando un Perfume #Shorts",
+        "titulo_yt": "Cómo Funciona la Memoria Olfativa y las Emociones #Shorts",
         "escenas": [
-            {"texto": "Puedes condicionar a una persona para que asocie una emoción positiva a tu presencia."},
-            {"texto": "Usa siempre el mismo perfume o gesto físico cuando se estén riendo a carcajadas contigo."},
-            {"texto": "Meses después, solo con oler ese aroma, su cerebro liberará endorfinas automáticamente."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El cerebro asocia rápidamente estímulos sensoriales a estados emocionales intensos."},
+            {"texto": "Si siempre llevas el mismo perfume en momentos de gran alegría compartida, estarás creando un anclaje."},
+            {"texto": "Tiempo después, el simple hecho de percibir ese aroma puede reactivar emociones positivas de forma casi automática."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "44. El Vínculo Traumático": {
         "cabecera": "RELACIONES TÓXICAS",
-        "titulo_yt": "Por Qué Duele Tanto Soltar a Quien te Hace Daño #Shorts #Psicologia",
+        "titulo_yt": "Por Qué Duele Tanto Soltar un Entorno Conflictivo #Shorts #Psicologia",
         "escenas": [
-            {"texto": "Si no puedes alejarte de quien te maltrata emocionalmente, no eres débil."},
-            {"texto": "Estás bajo un Vínculo Traumático. El ciclo de abuso segrega tanta adrenalina que altera tu química cerebral."},
-            {"texto": "Es un síndrome real de abstinencia, exactamente igual que dejar una droga dura."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Si te resulta imposible alejarte de una dinámica abusiva, no es por debilidad de carácter."},
+            {"texto": "Los ciclos de castigo y recompensa intensa pueden generar lo que se denomina un Vínculo Traumático."},
+            {"texto": "Alteran la química del cerebro creando respuestas biológicas muy similares al síndrome de abstinencia."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "45. Ley de Atracción (Proximidad)": {
         "cabecera": "EL PODER DE LA DISTANCIA",
-        "titulo_yt": "El Contacto Físico y la Distancia Zonal para Conquistar #Shorts",
+        "titulo_yt": "Cómo Funciona la Proxemia en la Comunicación Interpersonal #Shorts",
         "escenas": [
-            {"texto": "Entrar en el espacio íntimo de alguien, a menos de medio metro, activa alarmas biológicas."},
-            {"texto": "Pero si lo haces un segundo y retrocedes de inmediato, generas una tensión magnética."},
-            {"texto": "Se llama baile de proxemia. Es el arma de seducción más silenciosa y efectiva que existe."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Invadir el espacio íntimo de alguien de forma abrupta activa sus defensas biológicas de inmediato."},
+            {"texto": "Sin embargo, acercarse levemente durante un segundo para enfatizar un punto y volver a retroceder..."},
+            {"texto": "Es un uso estratégico de la proxemia que genera interés sin llegar a activar la alerta de amenaza."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "46. Sesgo de Supervivencia": {
         "cabecera": "EL ENGAÑO DEL ÉXITO",
-        "titulo_yt": "Por Qué No Debes Escuchar los Consejos de los Millonarios #Shorts",
+        "titulo_yt": "Por Qué Copiar a los Millonarios Rara Vez Funciona #Shorts",
         "escenas": [
-            {"texto": "Si copias la rutina matutina de un millonario, no te harás millonario."},
-            {"texto": "Es el Sesgo de Supervivencia: solo vemos a los pocos que triunfaron, no a los miles que fracasaron."},
-            {"texto": "El éxito a menudo requiere mucha más suerte y contexto del que te quieren vender."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Si replicas la rutina de las personas más ricas del mundo, lo más probable es que no te hagas millonario."},
+            {"texto": "Caemos en el Sesgo de Supervivencia: solo analizamos a los que triunfaron, ignorando a los miles que fracasaron haciendo lo mismo."},
+            {"texto": "El éxito suele requerir factores sistémicos y contextos que ningún gurú puede venderte en un curso."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "47. Reactancia Psicológica": {
         "cabecera": "PSICOLOGÍA INVERSA",
-        "titulo_yt": "Cómo Hacer que Alguien Haga Exactamente lo que Tú Quieres #Shorts",
+        "titulo_yt": "Por Qué Prohibir Algo Aumenta el Deseo de Hacerlo #Shorts",
         "escenas": [
-            {"texto": "El ser humano tiene una necesidad biológica de proteger su libertad de elección."},
-            {"texto": "Si le prohíbes algo a alguien de forma tajante, sentirá un deseo incontrolable de hacerlo."},
-            {"texto": "Usa la reactancia a tu favor desafiando sus capacidades: Apuesto a que no eres capaz de hacerlo."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El ser humano protege biológicamente su sensación de libertad y autonomía."},
+            {"texto": "Si se nos prohíbe algo de forma tajante, solemos experimentar Reactancia Psicológica, un deseo de recuperar el control."},
+            {"texto": "Es la razón por la que advertencias muy restrictivas suelen provocar el comportamiento opuesto al deseado."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
-    "48. Técnica del Bostezo": {
-        "cabecera": "TEST DE EMPATÍA OCULTO",
-        "titulo_yt": "Cómo Saber Quién te Está Mirando Disimuladamente en Grupo #Shorts",
+    "48. El Bostezo Contagioso": {
+        "cabecera": "TEST DE EMPATÍA SOCIAL",
+        "titulo_yt": "Por Qué el Bostezo nos Ayuda a Conectar en Grupo #Shorts",
         "escenas": [
-            {"texto": "¿Quieres saber si alguien del grupo te está observando cuando no miras?"},
-            {"texto": "Finge un bostezo enorme y exagerado. Y acto seguido mira a esa persona."},
-            {"texto": "El bostezo es tan contagioso que, si te estaba mirando, bostezará inevitablemente."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "El bostezo no es solo un indicador de cansancio, tiene un fuerte componente de empatía y vínculo social."},
+            {"texto": "Es tan contagioso que, a menudo, basta con ver a alguien bostezar para que nuestro cuerpo lo replique."},
+            {"texto": "Algunos estudios sugieren que sincronizarnos de esta manera ayuda a mantener la cohesión del grupo."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "49. Efecto Zeigarnik en el Amor": {
-        "cabecera": "EL ARTE DEL MISTERIO",
-        "titulo_yt": "Por Qué Ser Demasiado Claro al Principio Mata la Atracción #Shorts",
+        "cabecera": "EL ARTE DE LA DOSIFICACIÓN",
+        "titulo_yt": "Por Qué Dejar Espacio al Misterio Genera Interés #Shorts",
         "escenas": [
-            {"texto": "Si revelas todos tus sentimientos en la primera cita, aburrirás al cerebro del otro."},
-            {"texto": "A la mente le fascinan los puzzles sin resolver. Debes dejar que adivinen un poco."},
-            {"texto": "Retírate siempre antes de que la conversación muera. Les dejarás queriendo más."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Revelar absolutamente todos tus pensamientos en una primera interacción puede saturar al interlocutor."},
+            {"texto": "A nuestro cerebro le fascinan las historias que aún están por completarse."},
+            {"texto": "Dosificar la información y dejar espacio al descubrimiento mutuo mantiene la intriga y fomenta el interés a largo plazo."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     },
     "50. El Poder de los Nombres": {
-        "cabecera": "EL SONIDO MÁS DULCE",
-        "titulo_yt": "La Palabra Mágica que Desbloquea la Confianza de Cualquiera #Shorts",
+        "cabecera": "EL SONIDO MÁS ATRACTIVO",
+        "titulo_yt": "Por Qué Recordar Nombres Mejora tus Relaciones #Shorts",
         "escenas": [
-            {"texto": "Para cualquier persona, el sonido más importante de todo el idioma es su propio nombre."},
-            {"texto": "Pronunciar su nombre al principio o al final de una frase capta su atención inconsciente al instante."},
-            {"texto": "Aumenta tu carisma y dominancia usando el nombre de los demás de forma estratégica."},
-            {"texto": "Descarga mi libro Arquitectura de la Mente Invisible en el enlace de mi perfil."}
+            {"texto": "Para la mayoría de personas, su propio nombre es una de las palabras con mayor carga emocional del idioma."},
+            {"texto": "Mencionarlo con naturalidad durante una conversación capta la atención de forma automática y subconsciente."},
+            {"texto": "Es un indicador de respeto y memoria que facilita la creación de vínculos sólidos desde el primer momento."},
+            {"texto": "Descarga mi libro Arquitectura de la Mente en el enlace de mi perfil."}
         ]
     }
 }
@@ -564,7 +565,6 @@ async def generar_audio_y_tiempos(escenas, ruta_out):
     os.makedirs(carpeta, exist_ok=True)
 
     voz = "es-ES-ElviraNeural"
-
     ruta_silencio = os.path.join(carpeta, "silence.wav")
     os.system(f"ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 0.2 -q:a 9 -acodec pcm_s16le {ruta_silencio} -y -hide_banner -loglevel error")
 
@@ -589,14 +589,12 @@ async def generar_audio_y_tiempos(escenas, ruta_out):
             f_list.write(f"duration 0.2\n")
 
     os.system(f"ffmpeg -f concat -safe 0 -i temp_list.txt -c copy {ruta_out} -y -hide_banner -loglevel error")
-
     return tiempos_textos
 
 # ==============================================================================
-# IMÁGENES CON IA + INTEGRACIÓN DE PORTADA DEL LIBRO (portada.jpg)
+# IMÁGENES CON IA (LEONARDO -> POLLINATIONS -> RESPALDO)
 # ==============================================================================
 def crear_fondo_respaldo(ruta, semilla):
-    """Degradado oscuro por si falla la IA, para que el vídeo nunca se rompa."""
     rnd = random.Random(semilla)
     c1 = np.array([rnd.randint(10, 60), rnd.randint(10, 40), rnd.randint(40, 110)], dtype=float)
     c2 = np.array([rnd.randint(0, 25), rnd.randint(0, 25), rnd.randint(0, 40)], dtype=float)
@@ -604,29 +602,94 @@ def crear_fondo_respaldo(ruta, semilla):
     arr = (c1 * (1 - grad) + c2 * grad) * np.ones((1920, 1080, 3))
     Image.fromarray(arr.astype("uint8")).save(ruta, "JPEG", quality=92)
 
+def descargar_imagen_leonardo(prompt, ruta):
+    API_KEY = os.getenv("LEONARDO_API_KEY")
+    if not API_KEY:
+        return False
+    
+    print("    🧠 Intentando con Leonardo AI...")
+    url_gen = "https://cloud.leonardo.ai/api/rest/v1/generations"
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "authorization": f"Bearer {API_KEY}"
+    }
+    payload = {
+        "height": 1024,
+        "width": 576, # Ratio 9:16 nativo para evitar distorsiones
+        "prompt": prompt,
+        "num_images": 1
+    }
+    
+    try:
+        r = requests.post(url_gen, json=payload, headers=headers, timeout=30)
+        r.raise_for_status()
+        gen_id = r.json().get("sdGenerationJob", {}).get("generationId")
+        if not gen_id: return False
+        
+        url_get = f"https://cloud.leonardo.ai/api/rest/v1/generations/{gen_id}"
+        for _ in range(15):
+            time.sleep(4)
+            r_get = requests.get(url_get, headers=headers, timeout=30)
+            status = r_get.json().get("generations_by_pk", {}).get("status")
+            if status == "COMPLETE":
+                img_url = r_get.json()["generations_by_pk"]["generated_images"][0]["url"]
+                # Añadido timeout de seguridad a la descarga
+                img_data = requests.get(img_url, timeout=60).content
+                with open(ruta, "wb") as f:
+                    f.write(img_data)
+                Image.open(ruta).convert("RGB").save(ruta, "JPEG", quality=92)
+                return True
+            elif status == "FAILED":
+                return False
+    except Exception as e:
+        print(f"    ⚠️ Error en Leonardo AI: {e}")
+        return False
+    return False
+
+def descargar_imagen_pollinations(prompt, ruta, semilla):
+    print("    🌺 Intentando con Pollinations AI...")
+    prompt_limpio = prompt[:380]
+    url = (
+        "https://image.pollinations.ai/prompt/" + urllib.parse.quote(prompt_limpio)
+        + f"?width=1080&height=1920&model=flux&nologo=true&seed={semilla}"
+    )
+    for intento in range(3):
+        try:
+            r = requests.get(url, timeout=60)
+            if r.status_code == 200 and r.headers.get("content-type", "").startswith("image"):
+                with open(ruta, "wb") as f:
+                    f.write(r.content)
+                Image.open(ruta).convert("RGB").save(ruta, "JPEG", quality=92)
+                return True
+            print(f"    ⚠️ Respuesta {r.status_code} de Pollinations (intento {intento + 1})")
+        except Exception as e:
+            print(f"    ⚠️ Error de conexión Pollinations (intento {intento + 1}): {e}")
+        time.sleep(3)
+    return False
+
+def descargar_imagen_ia(prompt, ruta, semilla):
+    if descargar_imagen_leonardo(prompt, ruta):
+        return True
+    if descargar_imagen_pollinations(prompt, ruta, semilla):
+        return True
+    return False
+
 def crear_escena_portada(ruta_destino):
-    """
-    Composición profesional 1080x1920 usando portada.jpg:
-    - Fondo: la propia portada escalada y desenfocada (efecto estudio oscuro)
-    - Centro superior (entre la cabecera y los subtítulos): la portada nítida con borde de destaque
-    """
     if not os.path.exists(RUTA_PORTADA):
         return False
     try:
         portada = Image.open(RUTA_PORTADA).convert("RGB")
-        # 1. Crear fondo vertical desenfocado y oscurecido
         fondo = portada.resize((1080, 1920), Image.LANCZOS).filter(ImageFilter.GaussianBlur(28))
         capa_oscura = Image.new("RGB", (1080, 1920), (8, 10, 22))
         fondo = Image.blend(fondo, capa_oscura, 0.62)
 
-        # 2. Escalar la portada central para encajar entre la cabecera (y=230) y subtítulos (y=1200)
         max_w, max_h = 680, 860
         w_orig, h_orig = portada.size
         ratio = min(max_w / w_orig, max_h / h_orig)
         new_w, new_h = int(w_orig * ratio), int(h_orig * ratio)
         portada_nitida = portada.resize((new_w, new_h), Image.LANCZOS)
 
-        # 3. Añadir un marco dorado/amarillo sutil para resaltar el libro
         borde = 8
         marco = Image.new("RGB", (new_w + borde * 2, new_h + borde * 2), (255, 230, 0))
         marco.paste(portada_nitida, (borde, borde))
@@ -641,26 +704,6 @@ def crear_escena_portada(ruta_destino):
         print(f"    ⚠️ Error procesando portada.jpg: {e}")
         return False
 
-def descargar_imagen_ia(prompt, ruta, semilla):
-    prompt = prompt[:380]
-    url = (
-        "https://image.pollinations.ai/prompt/" + urllib.parse.quote(prompt)
-        + f"?width=1080&height=1920&model=flux&nologo=true&seed={semilla}"
-    )
-    for intento in range(3):
-        try:
-            r = requests.get(url, timeout=150)
-            if r.status_code == 200 and r.headers.get("content-type", "").startswith("image"):
-                with open(ruta, "wb") as f:
-                    f.write(r.content)
-                Image.open(ruta).convert("RGB").save(ruta, "JPEG", quality=92)
-                return True
-            print(f"    ⚠️ Respuesta {r.status_code} de la IA de imágenes (intento {intento + 1})")
-        except Exception as e:
-            print(f"    ⚠️ Error de imagen (intento {intento + 1}): {e}")
-        time.sleep(6 * (intento + 1))
-    return False
-
 def generar_imagenes(escenas, cabecera):
     carpeta = "render_tmp"
     rutas = []
@@ -671,7 +714,6 @@ def generar_imagenes(escenas, cabecera):
         ruta = os.path.join(carpeta, f"img_{i}.jpg")
         es_escena_libro = (i == total - 1) or ("libro" in esc["texto"].lower())
 
-        # En la última escena (promoción del libro), usamos portada.jpg si existe en el repo
         if es_escena_libro and crear_escena_portada(ruta):
             print(f"📕 Escena {i + 1}/{total}: Portada del libro ({RUTA_PORTADA}) integrada con éxito.", flush=True)
             rutas.append(ruta)
@@ -689,24 +731,13 @@ def generar_imagenes(escenas, cabecera):
     return rutas
 
 # ==============================================================================
-# SUBTÍTULOS
+# SUBTÍTULOS (Caché de fuentes y capas optimizado)
 # ==============================================================================
-def dibujar_subtitulos(frame, t, tiempos_textos, cabecera):
+def dibujar_subtitulos(frame, t, tiempos_textos, cabecera, capa_overlay, f_cab, f_sub):
+    # Ya no procesamos rectángulos ni cargamos fuentes por frame. Se pasa pre-procesado.
     img = Image.fromarray(frame).resize((1080, 1920), Image.LANCZOS).convert("RGBA")
-    capa = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
-    dr_capa = ImageDraw.Draw(capa)
-
-    dr_capa.rectangle([(0, 0), (1080, 230)], fill=(0, 0, 0, 160))
-    dr_capa.rectangle([(0, 1200), (1080, 1720)], fill=(0, 0, 0, 150))
-    img = Image.alpha_composite(img, capa).convert("RGB")
+    img = Image.alpha_composite(img, capa_overlay).convert("RGB")
     draw = ImageDraw.Draw(img)
-
-    try:
-        f_cab = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 46)
-        f_sub = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
-    except:
-        f_cab = ImageFont.load_default()
-        f_sub = ImageFont.load_default()
 
     bbox_c = draw.textbbox((0, 0), cabecera, font=f_cab)
     draw.text(((1080 - (bbox_c[2] - bbox_c[0])) / 2, 95), cabecera, font=f_cab, fill="#FFE600", stroke_width=4, stroke_fill="#000000")
@@ -739,7 +770,7 @@ def dibujar_subtitulos(frame, t, tiempos_textos, cabecera):
     return np.array(img)
 
 # ==============================================================================
-# PRODUCCIÓN DEL VÍDEO (imágenes IA + portada libro + zoom suave + voz + subtítulos)
+# PRODUCCIÓN DEL VÍDEO
 # ==============================================================================
 def producir_video_imagenes(clave, datos):
     print(f"🎬 Iniciando producción con IMÁGENES IA + PORTADA: {clave}", flush=True)
@@ -756,6 +787,19 @@ def producir_video_imagenes(clave, datos):
     n = len(inicios)
     cabecera = datos["cabecera"]
 
+    # Pre-calcular fuentes y overlay oscuro para ahorrar carga de CPU por frame
+    try:
+        f_cab = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 46)
+        f_sub = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
+    except:
+        f_cab = ImageFont.load_default()
+        f_sub = ImageFont.load_default()
+
+    capa_overlay = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+    dr_capa = ImageDraw.Draw(capa_overlay)
+    dr_capa.rectangle([(0, 0), (1080, 230)], fill=(0, 0, 0, 160))
+    dr_capa.rectangle([(0, 1200), (1080, 1720)], fill=(0, 0, 0, 150))
+
     def make_frame(t):
         idx = 0
         for i in range(n):
@@ -764,15 +808,16 @@ def producir_video_imagenes(clave, datos):
         ini = inicios[idx]
         fin = inicios[idx + 1] if idx + 1 < n else dur_total
         prog = min(max((t - ini) / max(fin - ini, 0.1), 0.0), 1.0)
-        # Zoom suave: en la escena final del libro hacemos un zoom mucho más sutil para no cortar la portada
+        
         if idx == n - 1:
             z = 1.0 + 0.04 * prog
         else:
             z = 1.0 + 0.12 * prog if idx % 2 == 0 else 1.12 - 0.12 * prog
+            
         w, h = 1080 / z, 1920 / z
         izq, arr = (1080 - w) / 2, (1920 - h) / 2
         recorte = imagenes[idx].crop((izq, arr, izq + w, arr + h)).resize((1080, 1920), Image.BILINEAR)
-        return dibujar_subtitulos(np.array(recorte), t, tiempos_textos, cabecera)
+        return dibujar_subtitulos(np.array(recorte), t, tiempos_textos, cabecera, capa_overlay, f_cab, f_sub)
 
     print("✍️ Montando vídeo con subtítulos sincronizados...")
     video = VideoClip(make_frame, duration=dur_total).set_audio(audio)
@@ -785,24 +830,26 @@ def producir_video_imagenes(clave, datos):
     return mp4_out
 
 # ==============================================================================
-# PUBLICACIÓN: TELEGRAM
+# PUBLICACIÓN
 # ==============================================================================
 def enviar_pack_telegram(video_path, titulo_yt):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("⚠️ Faltan credenciales de Telegram. Omitiendo.")
         return False
 
-    titulo_yt_limpio = titulo_yt[:100].strip()
-    descripcion_yt = (
-        f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-        f"📕 Descarga mi libro 'Arquitectura de la Mente Invisible' con DESCUENTO:\n"
+    # Truncar título y escapar HTML para evitar roturas de formato en Telegram
+    titulo_yt_limpio = html.escape(titulo_yt[:100].strip())
+    
+    descripcion_yt = html.escape(
+        f"¿Quieres entender el comportamiento humano?\n\n"
+        f"📕 Descarga mi libro 'Arquitectura de la Mente' con DESCUENTO:\n"
         f"👉 {LINK_CORTO}\n"
         f"🔗 Enlace directo: {LINK_LIBRO}\n\n"
-        f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
+        f"#psicologia #lenguajecorporal #desarrollopersonal #shorts"
     )
-    descripcion_tiktok = (
-        f"{titulo_yt_limpio} 🧠 Descarga mi libro 'Arquitectura de la Mente Invisible' en el enlace de mi perfil o aquí 👉 {LINK_CORTO} "
-        f"#psicologia #psicologiaoscura #lenguajecorporal #autoestima #manipulacion"
+    descripcion_tiktok = html.escape(
+        f"{titulo_yt_limpio} 🧠 Descarga mi libro 'Arquitectura de la Mente' en el enlace de mi perfil o aquí 👉 {LINK_CORTO} "
+        f"#psicologia #lenguajecorporal #autoestima"
     )
 
     url_video = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendVideo"
@@ -838,9 +885,6 @@ def enviar_pack_telegram(video_path, titulo_yt):
         print(f"❌ Error enviando a Telegram: {e}")
         return False
 
-# ==============================================================================
-# PUBLICACIÓN: INSTAGRAM REELS
-# ==============================================================================
 def publicar_instagram_reel(video_path, titulo_yt):
     INSTA_USER = os.getenv("INSTA_USER")
     INSTA_PASS = os.getenv("INSTA_PASS")
@@ -853,18 +897,23 @@ def publicar_instagram_reel(video_path, titulo_yt):
     titulo_limpio = titulo_yt[:100].strip()
     descripcion_ig = (
         f"{titulo_limpio}\n\n"
-        f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-        f"📕 Consigue mi libro 'Arquitectura de la Mente Invisible' en el enlace de mi perfil o entrando en:\n"
+        f"¿Quieres entender el comportamiento humano?\n\n"
+        f"📕 Consigue mi libro 'Arquitectura de la Mente' en el enlace de mi perfil o entrando en:\n"
         f"👉 {LINK_CORTO}\n"
         f"🔗 {LINK_LIBRO}\n\n"
-        f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
+        f"#psicologia #lenguajecorporal #desarrollopersonal #shorts"
     )
 
     print("📱 Conectando a Instagram mediante sesión inyectada...")
     try:
+        try:
+            sesion_guardada = json.loads(INSTA_SESSION)
+        except json.JSONDecodeError as e:
+            print(f"❌ Error crítico: El Secreto INSTA_SESSION no es un JSON válido. Detalle: {e}")
+            return False
+
         cl = Client()
         cl.delay_range = [2, 6]
-        sesion_guardada = json.loads(INSTA_SESSION)
         cl.settings = sesion_guardada
         cl.set_settings(sesion_guardada)
         cl.login(INSTA_USER, INSTA_PASS)
@@ -874,20 +923,29 @@ def publicar_instagram_reel(video_path, titulo_yt):
             video_path,
             descripcion_ig,
             extra_data={
-                "custom_accessibility_caption": "Vídeo de psicología y comportamiento humano con imágenes ilustrativas.",
+                "custom_accessibility_caption": "Vídeo de psicología y comportamiento humano.",
                 "like_and_view_counts_disabled": 0,
                 "disable_comments": 0,
             }
         )
         print("✅ ¡Reel publicado con éxito en Instagram!")
+
+        print("🚀 Subiendo Historia con enlace al libro...")
+        try:
+            enlace = StoryLink(webUri=LINK_CORTO)
+            cl.video_upload_to_story(
+                video_path,
+                links=[enlace]
+            )
+            print("✅ ¡Historia publicada con éxito con el enlace!")
+        except Exception as e:
+            print(f"❌ Error subiendo la Historia: {e}")
+
         return True
     except Exception as e:
-        print(f"❌ Error subiendo a Instagram: {e}")
+        print(f"❌ Error general en Instagram: {e}")
         return False
 
-# ==============================================================================
-# PUBLICACIÓN: YOUTUBE SHORTS
-# ==============================================================================
 def publicar_youtube_short(video_path, titulo_yt):
     YT_CLIENT_ID = os.getenv("YT_CLIENT_ID")
     YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET")
@@ -896,6 +954,9 @@ def publicar_youtube_short(video_path, titulo_yt):
     if not all([YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN]):
         print("⚠️ Faltan credenciales de YouTube en los Secrets. Omitiendo.")
         return False
+
+    # Truncado crítico para la API de YouTube (límite 100 caracteres)
+    titulo_limpio_yt = titulo_yt[:100].strip()
 
     print("📺 Conectando a YouTube Data API...")
     try:
@@ -908,17 +969,17 @@ def publicar_youtube_short(video_path, titulo_yt):
         )
         youtube = build("youtube", "v3", credentials=creds)
         descripcion_yt = (
-            f"¿Quieres dominar tu mente y entender el comportamiento humano?\n\n"
-            f"📕 Descarga mi manual 'Arquitectura de la Mente Invisible' con DESCUENTO aquí:\n"
+            f"¿Quieres entender el comportamiento humano?\n\n"
+            f"📕 Descarga mi manual 'Arquitectura de la Mente' con DESCUENTO aquí:\n"
             f"👉 {LINK_CORTO}\n"
             f"🔗 Enlace directo: {LINK_LIBRO}\n\n"
-            f"#psicologia #psicologiaoscura #lenguajecorporal #persuasion #manipulacion #desarrollopersonal #shorts"
+            f"#psicologia #lenguajecorporal #desarrollopersonal #shorts"
         )
         body = {
             "snippet": {
-                "title": titulo_yt,
+                "title": titulo_limpio_yt,
                 "description": descripcion_yt,
-                "tags": ["psicologia", "shorts", "psicologia oscura", "desarrollo personal", "arquitectura de la mente invisible"],
+                "tags": ["psicologia", "shorts", "desarrollo personal", "arquitectura de la mente"],
                 "categoryId": "27"
             },
             "status": {
@@ -958,7 +1019,6 @@ if __name__ == "__main__":
 
     ruta_mp4 = producir_video_imagenes(clave_elegida, datos)
 
-    # Publicación orientada a ventas propias
     exito_telegram = enviar_pack_telegram(ruta_mp4, datos["titulo_yt"])
     exito_ig = publicar_instagram_reel(ruta_mp4, datos["titulo_yt"])
     exito_yt = publicar_youtube_short(ruta_mp4, datos["titulo_yt"])
