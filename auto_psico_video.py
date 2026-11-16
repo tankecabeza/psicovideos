@@ -684,7 +684,11 @@ def generar_imagenes(escenas, cabecera):
     total = len(escenas)
     
     # Leemos todas las imágenes jpg de tu nueva carpeta
-    fondos_disponibles = glob.glob(os.path.join("fondos_base", "*.jpg"))
+    fondos_disponibles = [
+    os.path.join("fondos_base", f) 
+    for f in os.listdir("fondos_base") 
+    if f.lower().endswith((".jpg", ".jpeg"))
+]
     if not fondos_disponibles:
         print("⚠️ No se encontraron imágenes en la carpeta 'fondos_base'.")
     
