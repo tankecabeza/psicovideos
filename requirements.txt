@@ -1,9 +1,7 @@
 requests
-numpy==1.23.5
-Pillow
+Pillow<10
 edge-tts
 moviepy==1.0.3
-instagrapi
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
