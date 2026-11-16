@@ -25,7 +25,6 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 ARCHIVO_HISTORIAL = "historial_videos.txt"
 
-# Enlaces de promoción del libro
 LINK_LIBRO = "https://tankecabeza.gumroad.com/l/arquitectura-mente/OFERTA"
 LINK_CORTO = "https://bit.ly/4AkPY0T"
 RUTA_PORTADA = "portada.jpg"
@@ -37,7 +36,7 @@ ESTILO_IMAGEN = (
 )
 
 # ==============================================================================
-# BASE DE DATOS DE GUIONES (Corregidos y respaldados científicamente)
+# BASE DE DATOS DE GUIONES
 # ==============================================================================
 PACK_GUIONES = {
     "1. Defensa contra manipuladores": {
@@ -614,9 +613,11 @@ def descargar_imagen_leonardo(prompt, ruta):
         "content-type": "application/json",
         "authorization": f"Bearer {API_KEY}"
     }
+    
+    # ⚠️ Volvemos a 768x1024. El modelo base de Leonardo da error 400 con anchos no estándar como 576.
     payload = {
         "height": 1024,
-        "width": 576, # Ratio 9:16 nativo para evitar distorsiones
+        "width": 768, 
         "prompt": prompt,
         "num_images": 1
     }
@@ -634,7 +635,6 @@ def descargar_imagen_leonardo(prompt, ruta):
             status = r_get.json().get("generations_by_pk", {}).get("status")
             if status == "COMPLETE":
                 img_url = r_get.json()["generations_by_pk"]["generated_images"][0]["url"]
-                # Añadido timeout de seguridad a la descarga
                 img_data = requests.get(img_url, timeout=60).content
                 with open(ruta, "wb") as f:
                     f.write(img_data)
@@ -731,10 +731,9 @@ def generar_imagenes(escenas, cabecera):
     return rutas
 
 # ==============================================================================
-# SUBTÍTULOS (Caché de fuentes y capas optimizado)
+# SUBTÍTULOS
 # ==============================================================================
 def dibujar_subtitulos(frame, t, tiempos_textos, cabecera, capa_overlay, f_cab, f_sub):
-    # Ya no procesamos rectángulos ni cargamos fuentes por frame. Se pasa pre-procesado.
     img = Image.fromarray(frame).resize((1080, 1920), Image.LANCZOS).convert("RGBA")
     img = Image.alpha_composite(img, capa_overlay).convert("RGB")
     draw = ImageDraw.Draw(img)
@@ -787,7 +786,6 @@ def producir_video_imagenes(clave, datos):
     n = len(inicios)
     cabecera = datos["cabecera"]
 
-    # Pre-calcular fuentes y overlay oscuro para ahorrar carga de CPU por frame
     try:
         f_cab = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 46)
         f_sub = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
@@ -837,7 +835,6 @@ def enviar_pack_telegram(video_path, titulo_yt):
         print("⚠️ Faltan credenciales de Telegram. Omitiendo.")
         return False
 
-    # Truncar título y escapar HTML para evitar roturas de formato en Telegram
     titulo_yt_limpio = html.escape(titulo_yt[:100].strip())
     
     descripcion_yt = html.escape(
@@ -915,9 +912,16 @@ def publicar_instagram_reel(video_path, titulo_yt):
         cl = Client()
         cl.delay_range = [2, 6]
         
-        # --- PARCHE PARA EVITAR EL ERROR 404 de /v1/qe/expose/ ---
-        cl.qe_sync = lambda *args, **kwargs: None 
-        # ---------------------------------------------------------
+        # --- PARCHE DEFINITIVO ERROR 404 qe/expose ---
+        # Interceptamos la petición interna a los servidores de Meta para que omita 
+        # las rutas obsoletas que Instagram ya ha borrado, evitando el bloqueo.
+        original_request = cl.private_request
+        def patched_request(endpoint, *args, **kwargs):
+            if "qe/expose" in endpoint:
+                return {"status": "ok"}
+            return original_request(endpoint, *args, **kwargs)
+        cl.private_request = patched_request
+        # ---------------------------------------------
         
         cl.settings = sesion_guardada
         cl.set_settings(sesion_guardada)
@@ -960,7 +964,6 @@ def publicar_youtube_short(video_path, titulo_yt):
         print("⚠️ Faltan credenciales de YouTube en los Secrets. Omitiendo.")
         return False
 
-    # Truncado crítico para la API de YouTube (límite 100 caracteres)
     titulo_limpio_yt = titulo_yt[:100].strip()
 
     print("📺 Conectando a YouTube Data API...")
