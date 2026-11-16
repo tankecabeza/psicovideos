@@ -914,6 +914,11 @@ def publicar_instagram_reel(video_path, titulo_yt):
 
         cl = Client()
         cl.delay_range = [2, 6]
+        
+        # --- PARCHE PARA EVITAR EL ERROR 404 de /v1/qe/expose/ ---
+        cl.qe_sync = lambda *args, **kwargs: None 
+        # ---------------------------------------------------------
+        
         cl.settings = sesion_guardada
         cl.set_settings(sesion_guardada)
         cl.login(INSTA_USER, INSTA_PASS)
