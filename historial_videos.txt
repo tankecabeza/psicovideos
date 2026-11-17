@@ -4,3 +4,4 @@
 34. Efecto de Arrastre
 43. Condicionamiento Clásico
 17. El Efecto Pigmalión
+26. Ilusión de Alternativa
