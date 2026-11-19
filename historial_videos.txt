@@ -16,3 +16,4 @@
 4. Triangulación Visual
 25. Técnica de la Confusión
 48. El Bostezo Contagioso
+19. El Efecto Dunning-Kruger
