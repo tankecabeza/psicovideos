@@ -4,28 +4,15 @@ import time
 import random
 import asyncio
 import html
-import json
 import subprocess
-import urllib.parse
 import wave
-import glob
 
 import requests
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 import edge_tts
-import moviepy
-import moviepy.editor as _mpe
 from moviepy.editor import VideoClip, AudioFileClip
 
-# instagrapi (versiones recientes) accede a moviepy.VideoFileClip, pero en
-# moviepy 1.x esas clases solo existen en moviepy.editor. Las exponemos.
-for _n in ("VideoFileClip", "ImageClip", "AudioFileClip", "concatenate_videoclips"):
-    if not hasattr(moviepy, _n) and hasattr(_mpe, _n):
-        setattr(moviepy, _n, getattr(_mpe, _n))
-
-from instagrapi import Client
-from instagrapi.types import StoryLink
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -44,6 +31,7 @@ RUTA_PORTADA = "portada.jpg"
 W, H = 1080, 1920
 CARPETA = "render_tmp"
 FUENTE_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+GRAPH_API_VERSION = "v21.0"
 
 # Texto base del CTA; al publicar se sustituye por una variante al azar.
 # Todas las variantes deben contener la palabra "libro" (así se detecta la escena de portada).
@@ -682,19 +670,21 @@ def crear_escena_portada(ruta_destino):
 def generar_imagenes(escenas, cabecera):
     rutas = []
     total = len(escenas)
-    
-    # Leemos todas las imágenes jpg de tu nueva carpeta
-    fondos_disponibles = [
-    os.path.join("fondos_base", f) 
-    for f in os.listdir("fondos_base") 
-    if f.lower().endswith((".jpg", ".jpeg"))
-]
+
+    fondos_disponibles = []
+    if os.path.isdir("fondos_base"):
+        fondos_disponibles = [
+            os.path.join("fondos_base", f)
+            for f in os.listdir("fondos_base")
+            if f.lower().endswith((".jpg", ".jpeg"))
+        ]
+
     if not fondos_disponibles:
         print("⚠️ No se encontraron imágenes en la carpeta 'fondos_base'.")
-    
+
     for i, esc in enumerate(escenas):
         ruta = os.path.join(CARPETA, f"img_{i}.jpg")
-        
+
         # Detectamos si es la última escena o menciona la palabra "libro"
         es_escena_libro = (i == total - 1) or ("libro" in esc["texto"].lower())
 
@@ -705,19 +695,15 @@ def generar_imagenes(escenas, cabecera):
 
         print(f"🖼️ Asignando fondo aleatorio {i + 1}/{total}...", flush=True)
         if fondos_disponibles:
-            # Elegimos un fondo al azar de tus imágenes pre-generadas
             fondo_elegido = random.choice(fondos_disponibles)
-            
-            # Usamos la función a_vertical que ya tenías para asegurar que encaja a 1080x1920
             img = Image.open(fondo_elegido)
             a_vertical(img).save(ruta, "JPEG", quality=92)
         else:
-            # Si por algún motivo falla, usa tu degradado oscuro de emergencia
             print("    ↪ Usando fondo de respaldo (degradado).")
             crear_fondo_respaldo(ruta, random.randint(1, 10000))
-            
+
         rutas.append(ruta)
-        
+
     return rutas
 
 
@@ -813,7 +799,7 @@ def producir_video_imagenes(clave, datos):
     mp4_out = os.path.join(CARPETA, "VIDEO_FINAL.mp4")
     video.write_videofile(
         mp4_out, fps=24, codec="libx264", audio_codec="aac",
-        preset="veryfast", ffmpeg_params=["-pix_fmt", "yuv420p"], logger=None,
+        preset="veryfast", ffmpeg_params=["-pix_fmt", "yuv420p", "-movflags", "+faststart"], logger=None,
     )
     return mp4_out
 
@@ -891,72 +877,109 @@ def enviar_pack_telegram(video_path, titulo_yt):
 
 
 # ==============================================================================
-# PUBLICACIÓN: INSTAGRAM REELS E HISTORIAS
+# PUBLICACIÓN: INSTAGRAM REELS E HISTORIAS (META GRAPH API OFICIAL)
 # ==============================================================================
-def publicar_instagram_reel(video_path, titulo_yt):
-    INSTA_USER = os.getenv("INSTA_USER")
-    INSTA_PASS = os.getenv("INSTA_PASS")
-    INSTA_SESSION = os.getenv("INSTA_SESSION")
+def _subir_y_publicar_ig_video(ig_user_id, access_token, video_path, media_type, caption=None):
+    base_url = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 
-    if not all([INSTA_USER, INSTA_PASS, INSTA_SESSION]):
-        print("⚠️ Faltan credenciales de Instagram. Omitiendo.")
+    # 1. Crear contenedor de subida directa (resumable)
+    payload = {
+        "media_type": media_type,
+        "upload_type": "resumable",
+        "access_token": access_token,
+    }
+    if media_type == "REELS":
+        payload["share_to_feed"] = "true"
+        if caption:
+            payload["caption"] = caption
+
+    r_init = requests.post(f"{base_url}/{ig_user_id}/media", data=payload, timeout=60)
+    data_init = r_init.json()
+    if r_init.status_code != 200 or "id" not in data_init or "uri" not in data_init:
+        raise RuntimeError(f"Error inicializando contenedor ({media_type}): {data_init}")
+
+    container_id = data_init["id"]
+    upload_uri = data_init["uri"]
+
+    # 2. Subir el archivo binario MP4 directamente a Meta
+    file_size = os.path.getsize(video_path)
+    headers = {
+        "Authorization": f"OAuth {access_token}",
+        "offset": "0",
+        "file_size": str(file_size),
+    }
+    with open(video_path, "rb") as f:
+        r_up = requests.post(upload_uri, headers=headers, data=f, timeout=300)
+
+    if r_up.status_code != 200:
+        raise RuntimeError(f"Error subiendo binario ({media_type}): {r_up.text}")
+
+    # 3. Esperar a que Meta procese el vídeo
+    for intento in range(24):
+        r_status = requests.get(
+            f"{base_url}/{container_id}",
+            params={"fields": "status_code,status", "access_token": access_token},
+            timeout=30,
+        )
+        data_status = r_status.json()
+        estado = data_status.get("status_code")
+
+        if estado == "FINISHED":
+            break
+        if estado in ("ERROR", "EXPIRED"):
+            raise RuntimeError(f"Meta rechazó el procesamiento ({media_type}): {data_status}")
+
+        print(f"    ⏳ Procesando {media_type} en Meta ({intento + 1}/24)...", flush=True)
+        time.sleep(10)
+    else:
+        raise TimeoutError(f"Tiempo de espera agotado procesando {media_type} en Meta.")
+
+    # 4. Publicar el contenedor procesado
+    r_pub = requests.post(
+        f"{base_url}/{ig_user_id}/media_publish",
+        data={"creation_id": container_id, "access_token": access_token},
+        timeout=60,
+    )
+    data_pub = r_pub.json()
+    if r_pub.status_code != 200 or "id" not in data_pub:
+        raise RuntimeError(f"Error publicando ({media_type}): {data_pub}")
+
+    return data_pub["id"]
+
+
+def publicar_instagram_reel(video_path, titulo_yt):
+    IG_ACCESS_TOKEN = os.getenv("IG_ACCESS_TOKEN", "").strip()
+    IG_USER_ID = os.getenv("IG_USER_ID", "").strip()
+
+    if not all([IG_ACCESS_TOKEN, IG_USER_ID]):
+        print("⚠️ Faltan IG_ACCESS_TOKEN o IG_USER_ID en los Secrets. Omitiendo Instagram.")
         return False
 
     descripcion_ig = f"{titulo_limpio(titulo_yt)}\n\n" + descripcion_larga()
 
-    print("📱 Conectando a Instagram mediante sesión inyectada...")
+    print("📱 Conectando a Instagram mediante Meta Graph API oficial...", flush=True)
+    ok_reel = False
+
     try:
-        try:
-            sesion = json.loads(INSTA_SESSION)
-        except json.JSONDecodeError as e:
-            print(f"❌ INSTA_SESSION no es un JSON válido. Detalle: {e}")
-            return False
-
-        cl = Client()
-        cl.delay_range = [2, 6]
-
-        # Por si alguna versión aún llama al endpoint eliminado qe/expose
-        original_request = cl.private_request
-
-        def patched_request(endpoint, *args, **kwargs):
-            if "qe/expose" in str(endpoint):
-                return {"status": "ok"}
-            return original_request(endpoint, *args, **kwargs)
-
-        cl.private_request = patched_request
-
-        cl.set_settings(sesion)
-        cl.login(INSTA_USER, INSTA_PASS)
-
-        # Reel e Historia por separado: si falla uno, el otro se intenta igualmente
-        ok_reel = False
-        try:
-            print("🚀 Subiendo Reel a Instagram...")
-            cl.clip_upload(
-                video_path,
-                descripcion_ig,
-                extra_data={
-                    "custom_accessibility_caption": "Vídeo de psicología y comportamiento humano.",
-                    "like_and_view_counts_disabled": 0,
-                    "disable_comments": 0,
-                },
-            )
-            print("✅ ¡Reel publicado con éxito en Instagram!")
-            ok_reel = True
-        except Exception as e:
-            print(f"❌ Error subiendo el Reel: {e}")
-
-        try:
-            print("🚀 Subiendo Historia con enlace al libro...")
-            cl.video_upload_to_story(video_path, links=[StoryLink(webUri=LINK_CORTO)])
-            print("✅ ¡Historia publicada con éxito con el enlace!")
-        except Exception as e:
-            print(f"❌ Error subiendo la Historia: {e}")
-
-        return ok_reel
+        print("🚀 Subiendo Reel a Instagram...", flush=True)
+        reel_id = _subir_y_publicar_ig_video(
+            IG_USER_ID, IG_ACCESS_TOKEN, video_path, "REELS", caption=descripcion_ig
+        )
+        print(f"✅ ¡Reel publicado con éxito en Instagram! ID: {reel_id}", flush=True)
+        ok_reel = True
     except Exception as e:
-        print(f"❌ Error general en Instagram: {e}")
-        return False
+        print(f"❌ Error subiendo el Reel: {e}", flush=True)
+
+    try:
+        print("🚀 Subiendo Historia a Instagram...", flush=True)
+        story_id = _subir_y_publicar_ig_video(
+            IG_USER_ID, IG_ACCESS_TOKEN, video_path, "STORIES"
+        )
+        print(f"✅ ¡Historia publicada con éxito en Instagram! ID: {story_id}", flush=True)
+    except Exception as e:
+        print(f"❌ Error subiendo la Historia: {e}", flush=True)
+
+    return ok_reel
 
 
 # ==============================================================================
