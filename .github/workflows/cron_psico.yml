@@ -41,19 +41,14 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install "numpy<2" "moviepy==1.0.3" "Pillow<10" edge-tts requests google-api-python-client google-auth
-          # Actualizamos instagrapi para evitar errores heredados (p. ej. qe/expose)
-          pip install -U instagrapi
-          # Re-fijamos las versiones que necesita el script por si instagrapi las ha cambiado
-          pip install "numpy<2" "moviepy==1.0.3" "Pillow<10"
-          pip list 2>/dev/null | grep -i -E "instagrapi|moviepy|pillow|numpy"
+          pip list 2>/dev/null | grep -i -E "moviepy|pillow|numpy"
 
       - name: Fabricar y enviar el vídeo
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          INSTA_USER: ${{ secrets.INSTA_USER }}
-          INSTA_PASS: ${{ secrets.INSTA_PASS }}
-          INSTA_SESSION: ${{ secrets.INSTA_SESSION }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
