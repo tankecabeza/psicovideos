@@ -17,3 +17,4 @@
 25. Técnica de la Confusión
 48. El Bostezo Contagioso
 19. El Efecto Dunning-Kruger
+46. Sesgo de Supervivencia
