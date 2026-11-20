@@ -18,3 +18,4 @@
 48. El Bostezo Contagioso
 19. El Efecto Dunning-Kruger
 46. Sesgo de Supervivencia
+45. Ley de Atracción (Proximidad)
