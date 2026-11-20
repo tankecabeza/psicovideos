@@ -20,3 +20,4 @@
 46. Sesgo de Supervivencia
 45. Ley de Atracción (Proximidad)
 32. Triángulo de Karpman
+30. Efecto Forer
