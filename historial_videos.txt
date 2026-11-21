@@ -22,3 +22,4 @@
 32. Triángulo de Karpman
 30. Efecto Forer
 27. Refuerzo Intermitente
+42. Efecto de Mera Exposición
