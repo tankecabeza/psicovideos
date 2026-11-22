@@ -26,3 +26,4 @@
 21. Ley de Parkinson
 14. Bombardeo de Amor
 29. El Toque de Midas
+23. El Sesgo del Costo Hundido
