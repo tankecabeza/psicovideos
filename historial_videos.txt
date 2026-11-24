@@ -32,3 +32,4 @@
 2. Detectar mentiras
 12. El Anclaje en Negociación
 10. Técnica del Espejo
+5. El Efecto Halo
