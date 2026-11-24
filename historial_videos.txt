@@ -36,3 +36,4 @@
 11. El Efecto Franklin
 15. La Regla de los 3 Segundos
 18. La Técnica del Disco Rayado
+41. Principio de Contraste
