@@ -39,3 +39,4 @@
 41. Principio de Contraste
 13. El Efecto Pratfall
 1. Defensa contra manipuladores
+38. Efecto Spotlight
