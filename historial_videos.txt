@@ -42,3 +42,4 @@
 38. Efecto Spotlight
 6. Gaslighting Sutil
 24. El Secreto de los Cuentos
+7. Efecto Zeigarnik
