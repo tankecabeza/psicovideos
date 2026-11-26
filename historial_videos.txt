@@ -45,3 +45,4 @@
 7. Efecto Zeigarnik
 39. Paradoja de Abilene
 28. Efecto Espectador
+35. El Lenguaje de las Pupilas
