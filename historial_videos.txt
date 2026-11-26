@@ -44,3 +44,4 @@
 24. El Secreto de los Cuentos
 7. Efecto Zeigarnik
 39. Paradoja de Abilene
+28. Efecto Espectador
